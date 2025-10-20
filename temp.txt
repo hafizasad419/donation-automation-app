@@ -1,0 +1,75 @@
+Nice — deep breath. Here’s a **simple, idiot-proof step-by-step** runbook to get you from blank to fully tested, in the right order. Do them one at a time and don’t overthink it.
+
+---
+
+## Quick checklist (do these in order)
+
+1. **Verify env vars**
+
+   * Confirm `.env` has Twilio, Upstash, QStash, Google keys, `SHEET_ID`, `SHEET_RANGE_DONATIONS`, `SHEET_RANGE_MESSAGES`, `APP_BASE_URL`.
+   * If using local dev: set `APP_BASE_URL=http://localhost:5000`.
+
+2. **Start the server**
+
+   * In your project root:
+     `npm install` (if not done)
+     `npm run dev`  *(or `npx vercel dev` if you use vercel dev)*
+   * Confirm console shows: `SMS Donation Flow ready to receive messages` and port (5000).
+
+3. **Test outbound send via your own test route** *(verifies your sendSms code works)*
+
+   * Create/confirm test route: `POST /api/v1/test/send-test` that calls your `sendSms(to, message)` wrapper.
+   * Postman: JSON body `{ "to": "+YOUR_VERIFIED_NUMBER", "message": "Test from my code" }` (or use curl).
+   * If you receive SMS → your Twilio send code is valid.
+
+4. **Simulate incoming SMS to your webhook (real test of parsing + flow)**
+
+   * In Postman set **Body → x-www-form-urlencoded** and POST to `http://localhost:5000/api/twilio` with keys:
+     `From=+19876543210`
+     `To=+15854886365` (your twilio number)
+     `Body=Hi`
+     `SmsSid=SM123` `SmsStatus=received` `AccountSid=AC...`
+   * Watch logs: your controller should log the inbound message, create/update Redis session, and your service should call `sendSms()` to reply.
+
+5. **Verify Redis session was created**
+
+   * Check Upstash Data Browser (or run a small script): look for key `session:+19876543210` and confirm JSON contains `step`, `lastMessageAt`, and stored fields.
+
+6. **Test edit/change flows & validation**
+
+   * Send fake messages via Postman that exercise name, phone, taxId, amount, invalid values. Confirm your service replies with the correct validation messages and updates session.
+
+7. **Test QStash scheduling (timeout nudge)**
+
+   * After an inbound message, confirm your code called QStash and stored returned `jobId` at key `qjob:+19876543210`.
+   * Either wait 5 minutes for QStash to call `/api/check-inactivity` or manually simulate it by POSTing to `http://localhost:5000/api/check-inactivity` with body `{ "phone": "+19876543210" }`.
+   * Confirm Twilio outbound nudge sent and Redis `timedOut` flag updated.
+
+8. **Test Google Sheets append**
+
+   * Complete the flow through confirmation (`Body=Yes`) using Postman.
+   * Check the `Donations` tab in your spreadsheet — a new row should be appended with the fields per header.
+   * Also check `Messages` tab to see inbound/outbound log rows.
+
+9. **Test full end-to-end with ngrok (optional)**
+
+   * Start ngrok: `ngrok http 5000` → copy forwarding URL.
+   * Set Twilio webhook (Messaging → A message comes in) to `https://<ngrok>/api/twilio`.
+   * Send an SMS from your phone (or Twilio console) to the Twilio number and validate the whole live flow.
+
+10. **Swap to production Twilio creds & deploy**
+
+    * When client’s account/number verified, update `.env` to production values in Vercel and deploy. Re-run test 3–8 against live Twilio.
+
+---
+
+## Pro tips / sanity checks
+
+* If outbound fails, check Twilio logs (Console → Messaging → Logs) for error codes.
+* Use Upstash Data Browser to inspect keys quickly.
+* Keep `NODE_ENV=development` when testing for verbose logs.
+* If QStash returns no `id`, log the full response — cancel logic depends on that id.
+
+---
+
+Do step 1 → 2 now and tell me the console output. I’ll tell you exactly which Postman body to send for step 3 next.
