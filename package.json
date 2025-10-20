@@ -7,6 +7,7 @@
     "dev": "nodemon src/server.js",
     "start": "node src/server.js",
     "build": "echo 'Build completed'",
+    "vercel-build": "echo 'Vercel build completed'",
     "test": "node scripts/test-connections.js",
     "test:connections": "node scripts/test-connections.js",
     "test:cli": "node test/cli-test.js",

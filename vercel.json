@@ -1,11 +1,10 @@
 {
     "version": 2,
-    "builds": [
-        {
-            "src": "src/lambda.js",
-            "use": "@vercel/node"
+    "functions": {
+        "src/lambda.js": {
+            "runtime": "nodejs18.x"
         }
-    ],
+    },
     "routes": [
         {
             "src": "/(.*)",
