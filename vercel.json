@@ -1,14 +1,8 @@
 {
-    "version": 2,
-    "functions": {
-        "src/lambda.js": {
-            "runtime": "@vercel/node@3.0.0"
-        }
-    },
     "routes": [
         {
             "src": "/(.*)",
-            "dest": "src/lambda.js"
+            "dest": "src/server.js"
         }
     ]
 }
