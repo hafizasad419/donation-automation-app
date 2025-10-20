@@ -2,7 +2,7 @@
     "version": 2,
     "functions": {
         "src/lambda.js": {
-            "runtime": "nodejs18.x"
+            "runtime": "nodejs20.0"
         }
     },
     "routes": [
