@@ -91,12 +91,9 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Health check
 app.get('/health', (req, res) => {
-    res.
-        status(200).
-        json(
-            ApiResponse
-                .success(200, 'Health check successful', null)
-        );
+    res.status(200).json(
+        ApiResponse.success(200, 'Health check successful', null)
+    );
 });
 
 
