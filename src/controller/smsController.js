@@ -61,10 +61,19 @@ export async function handleIncomingSms(req, res) {
       session = { 
         step: STEPS.GREETING, 
         data: {}, 
-        lastMessageAt: Date.now() 
+        lastMessageAt: Date.now(),
+        timeoutMessageSent: false
       };
       await setSession(from, session);
       logRedis("setSession", from, true);
+    } else {
+      // Reset timeout message flag when user sends a message
+      if (session.timeoutMessageSent) {
+        session.timeoutMessageSent = false;
+        session.lastMessageAt = Date.now();
+        await setSession(from, session);
+        logRedis("setSession", from, true);
+      }
     }
     
     // Check if we're in the "new entry" waiting state (after donation completion)
@@ -120,9 +129,9 @@ export async function handleIncomingSms(req, res) {
       // Check if there's an existing session in progress
       if (session.step > STEPS.GREETING && session.step < STEPS.CONFIRMATION) {
         // User is in the middle of a donation
-        await sendSms(from, "You're in the middle of a donation. Reply 'Finish' to continue or 'New' to restart.");
+        await sendSms(from, "You're in the middle of a donation. Reply 'Continue' to continue or 'New' to restart.");
         logTwilio("sendSms", from, true);
-        await logMessage(from, "You're in the middle of a donation. Reply 'Finish' to continue or 'New' to restart.", "outbound", session.step);
+        await logMessage(from, "You're in the middle of a donation. Reply 'Continue' to continue or 'New' to restart.", "outbound", session.step);
         
         logStep(from, session.step, "Existing session detected, asking user to choose");
         return res.status(200).send("");
@@ -214,18 +223,20 @@ export async function handleIncomingSms(req, res) {
       }
     } else {
       // Add session guards - if user is in middle of donation and sends random input,
-      // ask them to clarify their intent
+      // ask them to clarify their intent (but NOT if it's a validation error)
       if (session.step > STEPS.GREETING && session.step < STEPS.CONFIRMATION) {
-        // Check if this looks like a random greeting or unrelated input
-        const isRandomGreeting = /^(hi|hello|hey|good morning|good afternoon|good evening|greetings|hi there|hello there|start|begin)$/i.test(body);
-        const isUnrelatedInput = body.length < 3 || /^(ok|yes|no|maybe|sure|alright)$/i.test(body);
+        // Only trigger guards for very specific unrelated commands, not validation errors
+        const isUnrelatedCommand = /^(hi|hello|hey|good morning|good afternoon|good evening|greetings|hi there|hello there|start|begin|help)$/i.test(body);
         
-        if (isRandomGreeting || isUnrelatedInput) {
-          await sendSms(from, "You're in the middle of a donation. Reply 'Finish' to continue or 'New' to restart.");
+        // Don't trigger for validation attempts - let the step handlers deal with validation
+        const isValidationAttempt = body.length > 0 && !isUnrelatedCommand;
+        
+        if (isUnrelatedCommand) {
+          await sendSms(from, "You're in the middle of a donation. Reply 'Continue' to continue or 'New' to restart.");
           logTwilio("sendSms", from, true);
-          await logMessage(from, "You're in the middle of a donation. Reply 'Finish' to continue or 'New' to restart.", "outbound", session.step);
+          await logMessage(from, "You're in the middle of a donation. Reply 'Continue' to continue or 'New' to restart.", "outbound", session.step);
           
-          logStep(from, session.step, "Random input detected, asking user to clarify");
+          logStep(from, session.step, "Unrelated command detected, asking user to clarify");
           return res.status(200).send("");
         }
       }
@@ -322,14 +333,15 @@ export async function handleInactivityCheck(req, res) {
     }
     
     const diff = Date.now() - (session.lastMessageAt || 0);
-    if (diff > TIMEOUT_MS) {
-      // Send timeout message
+    if (diff > TIMEOUT_MS && !session.timeoutMessageSent) {
+      // Send timeout message only once
       await sendSms(phone, MESSAGES.TIMEOUT_MESSAGE);
       logTwilio("sendSms", phone, true);
       await logMessage(phone, MESSAGES.TIMEOUT_MESSAGE, "outbound", session.step);
       
-      // Mark as timed out
+      // Mark as timed out and timeout message sent
       session.timedOut = true;
+      session.timeoutMessageSent = true;
       await setSession(phone, session);
       logRedis("setSession", phone, true);
       

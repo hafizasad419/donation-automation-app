@@ -36,10 +36,10 @@ export async function handleFinishRequest(phone, session) {
     if (session.step === STEPS.CONFIRMATION) {
       // Show confirmation summary
       const summaryMessage = MESSAGES.CONFIRMATION_SUMMARY
-        .replace("{congregation}", session.congregation || "")
-        .replace("{person_name}", session.personName || "")
-        .replace("{tax_id}", session.taxId || "")
-        .replace("{amount}", session.amount || "");
+        .replace("{congregation}", session.data.congregation || "")
+        .replace("{person_name}", session.data.personName || "")
+        .replace("{tax_id}", session.data.taxId || "")
+        .replace("{amount}", session.data.amount || "");
       
       await sendSms(phone, summaryMessage);
       logTwilio("sendSms", phone, true);

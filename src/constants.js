@@ -45,7 +45,7 @@ export const MESSAGES = {
   START_OVER_CONFIRM: "You're about to start fresh and discard what we already filled in.\nAre you sure you want to start over?\n(Reply \"Yes\" to restart, or \"No\" to continue.)",
   START_OVER_YES: "No problem. Let's start again — what's the congregation or organization name?",
 
-  NEW_ENTRY_MIDWAY: "You're still in the middle of one donation.\nWould you like to finish this one or start a new one?\nSay \"Finish\" to continue, or \"New\" to start over from the beginning."
+  NEW_ENTRY_MIDWAY: "You're still in the middle of one donation.\nWould you like to finish this one or start a new one?\nSay \"Continue\" to continue, or \"New\" to start over from the beginning."
 };
 
 // Command Patterns
