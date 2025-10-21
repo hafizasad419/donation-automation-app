@@ -21,7 +21,7 @@ export const MESSAGES = {
   CONGREGATION_SUCCESS: "Got it — the congregation is {congregation}.\nNow, what's the person's full name?",
   CONGREGATION_INVALID: "Hmm, I didn't catch that. Please send the congregation or organization name in words (like Bais Shalom).\nLet's try again — what's the congregation or organization name?",
   
-  NAME_SUCCESS: "Thanks! I've got the person's name as {person_name}.\nNow please send the person's phone number (9 digits, like 1212-444-1100).",
+  NAME_SUCCESS: "Thanks! I've got the person's name as {person_name}.\nNow please send the person's phone number (10 digits, like 12124441100).",
   NAME_INVALID: "That seems too short. Please send the person's full name, at least two letters — for example Moshe Cohen.",
   
   PHONE_SUCCESS: "Thanks! I've got the person's phone number as {phone}.\nNow please send the Tax ID (9 digits, like 123456789 or 12-3456789).",
