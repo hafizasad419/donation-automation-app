@@ -1,6 +1,6 @@
 import dotenv from 'dotenv';
 import { testConnection as testRedis } from '../src/lib/redis.js';
-import { testConnection as testTwilio } from '../src/lib/twilio.js';
+import { testConnection as testTwilio, testMessageCollabConnection } from '../src/lib/twilio.js';
 import { testConnection as testQStash } from '../src/lib/qstash.js';
 import { testConnection as testSheets } from '../src/lib/sheets.js';
 
@@ -13,6 +13,7 @@ async function testAllConnections() {
   const results = {
     redis: false,
     twilio: false,
+    messagecollab: false,
     qstash: false,
     sheets: false
   };
@@ -32,14 +33,21 @@ async function testAllConnections() {
   }
   
   try {
-    console.log('\n3. Testing QStash connection...');
+    console.log('\n3. Testing MessageCollab connection...');
+    results.messagecollab = await testMessageCollabConnection();
+  } catch (error) {
+    console.error('❌ MessageCollab test failed:', error.message);
+  }
+  
+  try {
+    console.log('\n4. Testing QStash connection...');
     results.qstash = await testQStash();
   } catch (error) {
     console.error('❌ QStash test failed:', error.message);
   }
   
   try {
-    console.log('\n4. Testing Google Sheets connection...');
+    console.log('\n5. Testing Google Sheets connection...');
     results.sheets = await testSheets();
   } catch (error) {
     console.error('❌ Google Sheets test failed:', error.message);
@@ -49,6 +57,7 @@ async function testAllConnections() {
   console.log('========================');
   console.log(`Redis: ${results.redis ? '✅ Connected' : '❌ Failed'}`);
   console.log(`Twilio: ${results.twilio ? '✅ Connected' : '❌ Failed'}`);
+  console.log(`MessageCollab: ${results.messagecollab ? '✅ Connected' : '❌ Failed'}`);
   console.log(`QStash: ${results.qstash ? '✅ Connected' : '❌ Failed'}`);
   console.log(`Sheets: ${results.sheets ? '✅ Connected' : '❌ Failed'}`);
   

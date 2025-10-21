@@ -30,8 +30,20 @@ import { APP_BASE_URL } from "../config/index.js";
 
 export async function handleIncomingSms(req, res) {
   try {
-    const from = req.body.From || req.body.from;
-    const body = (req.body.Body || req.body.body || "").trim();
+    // Handle both Twilio and MessageCollab webhook formats
+    let from, body;
+    
+    // Check if this is a MessageCollab webhook (has 'mId' field)
+    if (req.body.mId) {
+      from = req.body.from;
+      body = (req.body.message || "").trim();
+      console.log("📱 Processing MessageCollab webhook format");
+    } else {
+      // Default to Twilio webhook format
+      from = req.body.From || req.body.from;
+      body = (req.body.Body || req.body.body || "").trim();
+      console.log("📱 Processing Twilio webhook format");
+    }
     
     if (!from || !body) {
       console.log("❌ Missing From or Body in request");

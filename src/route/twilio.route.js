@@ -18,6 +18,22 @@ router.post('/twilio', async (req, res) => {
   }
 });
 
+// MessageCollab webhook endpoint
+router.post('/messagecollab', async (req, res) => {
+  try {
+    console.log('📱 MessageCollab webhook received:', {
+      from: req.body.from,
+      message: req.body.message,
+      mId: req.body.mId,
+      timestamp: new Date().toISOString()
+    });
+    await handleIncomingSms(req, res);
+  } catch (error) {
+    console.error('❌ MessageCollab webhook error:', error);
+    res.status(500).send("Internal server error");
+  }
+});
+
 // Inactivity check endpoint (called by QStash)
 router.post('/check-inactivity', async (req, res) => {
   try {

@@ -31,6 +31,12 @@ export const SHEET_RANGE_MESSAGES = process.env.SHEET_RANGE_MESSAGES;
 export const GOOGLE_SERVICE_EMAIL = process.env.GOOGLE_SERVICE_EMAIL;
 export const GOOGLE_PRIVATE_KEY = process.env.GOOGLE_PRIVATE_KEY;
 
+
+// messagecollab
+export const MESSAGECOLLAB_ACCOUNT_ID = process.env.MESSAGECOLLAB_ACCOUNT_ID; 
+export const MESSAGECOLLAB_PHONE_NUMBER = process.env.MESSAGECOLLAB_PHONE_NUMBER;
+export const MESSAGECOLLAB_TOKEN = process.env.MESSAGECOLLAB_TOKEN;
+
 // Optional Configuration
 export const ADMIN_EMAIL = process.env.ADMIN_EMAIL;
 
@@ -50,7 +56,10 @@ export function validateEnvironment() {
     'SHEET_RANGE_MESSAGES',
     'GOOGLE_SERVICE_EMAIL',
     'GOOGLE_PRIVATE_KEY',
-    'APP_BASE_URL'
+    'APP_BASE_URL',
+    'MESSAGECOLLAB_ACCOUNT_ID',
+    'MESSAGECOLLAB_PHONE_NUMBER',
+    'MESSAGECOLLAB_TOKEN'
   ];
 
   const missing = required.filter(key => !process.env[key]);
