@@ -9,6 +9,15 @@ export async function handleCongregation(phone, text, session) {
   try {
     logStep(phone, 1, "Processing congregation input", { text });
     
+    // Guard: Don't process greetings as congregation names
+    const isGreeting = /^(hi|hello|hey|good morning|good afternoon|good evening|greetings|hi there|hello there|start|begin)$/i.test(text);
+    if (isGreeting) {
+      await sendSms(phone, "Let's begin — what's the congregation or organization name?");
+      await logMessage(phone, "Let's begin — what's the congregation or organization name?", "outbound", 1);
+      logStep(phone, 1, "Rejected greeting as congregation input");
+      return session;
+    }
+    
     // Parse and validate congregation name
     const congregation = congregationSchema.parse(text);
     

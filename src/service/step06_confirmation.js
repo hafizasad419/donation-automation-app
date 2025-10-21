@@ -3,7 +3,7 @@ import { setSession } from "../lib/redis.js";
 import { appendDonationRecord, generateRecordId } from "../lib/sheets.js";
 import { logMessage } from "../lib/sheets.js";
 import { logStep, logRedis, logTwilio } from "../lib/logger.js";
-import { MESSAGES, COMMANDS } from "../constants.js";
+import { MESSAGES, COMMANDS, STEPS } from "../constants.js";
 
 export async function handleConfirmation(phone, text, session) {
   try {

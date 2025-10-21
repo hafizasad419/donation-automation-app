@@ -103,16 +103,29 @@ export async function handleIncomingSms(req, res) {
       logStep(from, session.step, "Cancelled previous timeout job", { jobId: prevJobId });
     }
     
-    // Handle special commands first
-    if (COMMANDS.GREETING.test(body) && session.step === STEPS.GREETING) {
-      const result = await handleGreeting(from, body, session);
-      if (result) {
-        session = result;
+    // Handle greetings and check for existing sessions
+    if (COMMANDS.GREETING.test(body)) {
+      // Check if there's an existing session in progress
+      if (session.step > STEPS.GREETING && session.step < STEPS.CONFIRMATION) {
+        // User is in the middle of a donation
+        await sendSms(from, "You're in the middle of a donation. Reply 'Finish' to continue or 'New' to restart.");
+        logTwilio("sendSms", from, true);
+        await logMessage(from, "You're in the middle of a donation. Reply 'Finish' to continue or 'New' to restart.", "outbound", session.step);
+        
+        logStep(from, session.step, "Existing session detected, asking user to choose");
+        return res.status(200).send("");
+      } else {
+        // No active session, start new flow
+        const result = await handleGreeting(from, body, session);
+        if (result) {
+          session = result;
+        }
+        return res.status(200).send("");
       }
-      return res.status(200).send("");
     }
     
     // If user is at greeting step but didn't send a greeting, treat as congregation input
+    // Only do this if the greeting handler didn't already process the message
     if (session.step === STEPS.GREETING && !COMMANDS.GREETING.test(body)) {
       // Move to congregation step and treat this input as congregation name
       session.step = STEPS.CONGREGATION;
@@ -129,13 +142,26 @@ export async function handleIncomingSms(req, res) {
     }
     
     if (COMMANDS.START_OVER.test(body)) {
-      const cancelService = await import("../service/cancelService.js");
-      const result = await cancelService.handleStartOver(from, session);
-      if (result) {
-        session = result;
-      } else {
-        return res.status(200).send("");
-      }
+      // Clear session completely and start fresh
+      await deleteSession(from);
+      logRedis("deleteSession", from, true);
+      
+      // Create new session starting from congregation step
+      session = { 
+        step: STEPS.CONGREGATION, 
+        data: {}, 
+        lastMessageAt: Date.now() 
+      };
+      await setSession(from, session);
+      logRedis("setSession", from, true);
+      
+      // Send start message
+      await sendSms(from, "Let's begin — what's the congregation or organization name?");
+      logTwilio("sendSms", from, true);
+      await logMessage(from, "Let's begin — what's the congregation or organization name?", "outbound", STEPS.CONGREGATION);
+      
+      logStep(from, STEPS.CONGREGATION, "Session restarted from beginning");
+      return res.status(200).send("");
     }
     
     if (COMMANDS.CHANGE.test(body)) {
@@ -149,16 +175,49 @@ export async function handleIncomingSms(req, res) {
         session = result;
       }
     } else if (COMMANDS.NEW.test(body)) {
-      const result = await handleNewEntryMidway(from, session);
-      if (result) {
-        session = result;
-      }
+      // Clear session completely and start fresh
+      await deleteSession(from);
+      logRedis("deleteSession", from, true);
+      
+      // Create new session starting from congregation step
+      session = { 
+        step: STEPS.CONGREGATION, 
+        data: {}, 
+        lastMessageAt: Date.now() 
+      };
+      await setSession(from, session);
+      logRedis("setSession", from, true);
+      
+      // Send start message
+      await sendSms(from, "Let's begin — what's the congregation or organization name?");
+      logTwilio("sendSms", from, true);
+      await logMessage(from, "Let's begin — what's the congregation or organization name?", "outbound", STEPS.CONGREGATION);
+      
+      logStep(from, STEPS.CONGREGATION, "Session restarted from beginning");
+      return res.status(200).send("");
     } else if (body.toLowerCase().includes("help")) {
       const result = await handleHelp(from, session);
       if (result) {
         session = result;
       }
     } else {
+      // Add session guards - if user is in middle of donation and sends random input,
+      // ask them to clarify their intent
+      if (session.step > STEPS.GREETING && session.step < STEPS.CONFIRMATION) {
+        // Check if this looks like a random greeting or unrelated input
+        const isRandomGreeting = /^(hi|hello|hey|good morning|good afternoon|good evening|greetings|hi there|hello there|start|begin)$/i.test(body);
+        const isUnrelatedInput = body.length < 3 || /^(ok|yes|no|maybe|sure|alright)$/i.test(body);
+        
+        if (isRandomGreeting || isUnrelatedInput) {
+          await sendSms(from, "You're in the middle of a donation. Reply 'Finish' to continue or 'New' to restart.");
+          logTwilio("sendSms", from, true);
+          await logMessage(from, "You're in the middle of a donation. Reply 'Finish' to continue or 'New' to restart.", "outbound", session.step);
+          
+          logStep(from, session.step, "Random input detected, asking user to clarify");
+          return res.status(200).send("");
+        }
+      }
+      
       // Handle normal step flow
       let result = null;
       

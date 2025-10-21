@@ -20,9 +20,9 @@ export async function handleGreeting(phone, text, session) {
     logTwilio("sendSms", phone, true);
     
     // Log message to sheets
-    await logMessage(phone, MESSAGES.GREETING, "outbound", 0);
+    await logMessage(phone, MESSAGES.GREETING, "outbound", STEPS.CONGREGATION);
     
-    logStep(phone, 0, "Greeting processed successfully");
+    logStep(phone, STEPS.CONGREGATION, "Greeting processed successfully");
     return session;
     
   } catch (error) {
