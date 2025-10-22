@@ -47,25 +47,125 @@ export async function handleConfirmation(phone, text, session) {
       logStep(phone, 6, "Donation confirmed and saved", { recordId, record });
       return session;
       
-    } else if (COMMANDS.CHANGE.test(text)) {
-      // Handle change requests
-      await sendSms(phone, MESSAGES.CONFIRMATION_CHANGE);
-      logTwilio("sendSms", phone, true);
-      
-      await logMessage(phone, MESSAGES.CONFIRMATION_CHANGE, "outbound", 6);
-      
-      logStep(phone, 6, "Change request received", { text });
-      return session;
-      
     } else {
-      // Invalid response
-      await sendSms(phone, MESSAGES.CONFIRMATION_CHANGE);
-      logTwilio("sendSms", phone, true);
-      
-      await logMessage(phone, MESSAGES.CONFIRMATION_CHANGE, "outbound", 6);
-      
-      logStep(phone, 6, "Invalid confirmation response", { text });
-      return session;
+      // Check if this is a numbered edit request (e.g., "2. Asad Riaz")
+      const numberedEditMatch = text.match(/^(\d+)\.\s*(.+)$/);
+      if (numberedEditMatch) {
+        const fieldNumber = parseInt(numberedEditMatch[1]);
+        const newValue = numberedEditMatch[2].trim();
+        
+        // Map field numbers to field names and validation functions
+        let fieldName = null;
+        let validationFunction = null;
+        let stepHandler = null;
+        
+        switch (fieldNumber) {
+          case 1: // Congregation
+            fieldName = "congregation";
+            validationFunction = async (value) => {
+              const { congregationSchema } = await import("../validator/step01.zod.js");
+              return congregationSchema.parse(value);
+            };
+            stepHandler = "handleCongregation";
+            break;
+          case 2: // Person Name
+            fieldName = "personName";
+            validationFunction = async (value) => {
+              const { personNameSchema } = await import("../validator/step02.zod.js");
+              return personNameSchema.parse(value);
+            };
+            stepHandler = "handlePersonName";
+            break;
+          case 3: // Tax ID
+            fieldName = "taxId";
+            validationFunction = async (value) => {
+              const { taxIdSchema } = await import("../validator/step04.zod.js");
+              return taxIdSchema.parse(value);
+            };
+            stepHandler = "handleTaxId";
+            break;
+          case 4: // Amount
+            fieldName = "amount";
+            validationFunction = async (value) => {
+              const { amountSchema } = await import("../validator/step05.zod.js");
+              return amountSchema.parse(value);
+            };
+            stepHandler = "handleAmount";
+            break;
+          default:
+            // Invalid field number
+            await sendSms(phone, "Please enter a number between 1-4 followed by the new value (e.g., '2. Moshe Kohn')");
+            logTwilio("sendSms", phone, true);
+            await logMessage(phone, "Invalid field number", "outbound", 6);
+            return session;
+        }
+        
+        if (fieldName && validationFunction) {
+          try {
+            // Validate the new value
+            const validatedValue = await validationFunction(newValue);
+            
+            // Update the session data
+            if (fieldName === "amount") {
+              session.data.amount = validatedValue.formatted;
+              session.data.amountNumeric = validatedValue.numeric;
+            } else {
+              session.data[fieldName] = validatedValue;
+            }
+            
+            session.lastMessageAt = Date.now();
+            await setSession(phone, session);
+            logRedis("setSession", phone, true);
+            
+            // Send updated confirmation summary
+            const summaryMessage = MESSAGES.CONFIRMATION_SUMMARY
+              .replace("{congregation}", session.data.congregation || "")
+              .replace("{person_name}", session.data.personName || "")
+              .replace("{tax_id}", session.data.taxId || "")
+              .replace("{amount}", session.data.amount || "");
+            
+            await sendSms(phone, summaryMessage);
+            logTwilio("sendSms", phone, true);
+            await logMessage(phone, summaryMessage, "outbound", 6);
+            
+            logStep(phone, 6, `Field ${fieldNumber} updated successfully`, { fieldName, newValue: validatedValue });
+            return session;
+            
+          } catch (error) {
+            // Validation failed, send appropriate error message
+            let errorMessage = "";
+            switch (fieldNumber) {
+              case 1:
+                errorMessage = "Hmm, I didn't catch that. Please send the congregation or organization name in words (like Bais Shalom).";
+                break;
+              case 2:
+                errorMessage = "That seems too short. Please send the person's full name, at least two letters — for example Moshe Cohen.";
+                break;
+              case 3:
+                errorMessage = "That doesn't look like a Tax ID, a Tax ID should have 9 digits (for example 123456789).";
+                break;
+              case 4:
+                errorMessage = "Please write the number as digits, like 180 or $180.00.";
+                break;
+            }
+            
+            await sendSms(phone, errorMessage);
+            logTwilio("sendSms", phone, true);
+            await logMessage(phone, errorMessage, "outbound", 6);
+            
+            logStep(phone, 6, `Field ${fieldNumber} validation failed`, { error: error.message });
+            return session;
+          }
+        }
+      } else {
+        // Invalid response format
+        await sendSms(phone, "Please reply 'Yes' to confirm or use the format 'number. new value' to edit (e.g., '2. Moshe Kohn')");
+        logTwilio("sendSms", phone, true);
+        await logMessage(phone, "Invalid response format", "outbound", 6);
+        
+        logStep(phone, 6, "Invalid confirmation response", { text });
+        return session;
+      }
     }
     
   } catch (error) {

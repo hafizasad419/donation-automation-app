@@ -8,6 +8,58 @@ export async function handleEditRequest(phone, text, session) {
   try {
     logStep(phone, session.step, "Processing edit request", { input: text });
     
+    // Check if this is a numbered edit request (e.g., "2. Asad Riaz")
+    const numberedEditMatch = text.match(/^(\d+)\.\s*(.+)$/);
+    if (numberedEditMatch) {
+      const fieldNumber = parseInt(numberedEditMatch[1]);
+      const newValue = numberedEditMatch[2].trim();
+      
+      // Map field numbers to field names
+      let fieldName = null;
+      let message = "";
+      
+      switch (fieldNumber) {
+        case 1: // Congregation
+          fieldName = "congregation";
+          message = "What's the congregation or organization name?";
+          break;
+        case 2: // Person Name
+          fieldName = "personName";
+          message = "What's the person's full name?";
+          break;
+        case 3: // Tax ID
+          fieldName = "taxId";
+          message = "Please send the Tax ID (9 digits, like 123456789 or 12-3456789).";
+          break;
+        case 4: // Amount
+          fieldName = "amount";
+          message = "What's the donation amount? (You can write 125, $125, or $125.00)";
+          break;
+        default:
+          await sendSms(phone, "Please enter a number between 1-4 followed by the new value (e.g., '2. Moshe Kohn')");
+          await logMessage(phone, "Invalid field number", "outbound", session.step);
+          return session;
+      }
+      
+      if (fieldName) {
+        // Set the editing field and appropriate step
+        session.editingField = fieldName;
+        session.step = fieldNumber === 1 ? STEPS.CONGREGATION : 
+                      fieldNumber === 2 ? STEPS.PERSON_NAME :
+                      fieldNumber === 3 ? STEPS.TAX_ID : STEPS.AMOUNT;
+        
+        await setSession(phone, session);
+        logRedis("setSession", phone, true);
+        
+        await sendSms(phone, message);
+        logTwilio("sendSms", phone, true);
+        await logMessage(phone, message, "outbound", session.step);
+        
+        logStep(phone, session.step, `Edit request processed for field ${fieldNumber}`, { fieldName });
+        return session;
+      }
+    }
+    
     const lowerText = text.toLowerCase();
     
     // Handle different edit requests

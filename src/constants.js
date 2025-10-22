@@ -33,7 +33,7 @@ export const MESSAGES = {
   AMOUNT_SUCCESS: "Perfect — I've got the Tax ID as {tax_id}.\nWhat's the donation amount?\n(You can write 125, $125, or $125.00)\nIf you'd like to change something earlier, you can still say \"Change the congregation\" or \"Go back.\"",
   AMOUNT_INVALID: "Please write the number as digits, like 180 or $180.00.\nWhat's the donation amount?",
 
-  CONFIRMATION_SUMMARY: "Here's what I have so far:\n• Congregation: {congregation}\n• Person: {person_name}\n• Tax ID: {tax_id}\n• Amount: {amount}\n\nDoes everything look right?\nPlease reply \"Yes\" to confirm — or tell me what to fix (for example, \"Change the amount\" or \"Fix the name\").",
+  CONFIRMATION_SUMMARY: "Here's what I have so far:\n1. Congregation: {congregation}\n2. Person: {person_name}\n3. Tax ID: {tax_id}\n4. Amount: {amount}\n\nDoes everything look right?\nPlease reply \"Yes\" to confirm - or reply with the number of the item you'd like to edit, followed by the new details.\n\nExample:\n2. Moshe Kohn",
 
   CONFIRMATION_SUCCESS: "Great! Your donation record has been saved.\nRecord ID: {record_id}. Have a great day!",
   CONFIRMATION_CHANGE: "Please reply \"Yes\" to confirm or tell me what to change.",
