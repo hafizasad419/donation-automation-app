@@ -18,6 +18,6 @@ export const congregationSchema = z.string()
   .refine((s) => s.length >= 2, {
     message: "Congregation name must be at least 2 characters long"
   })
-  .refine((s) => /^[a-zA-Z\s\-'\.]+$/.test(s), {
+  .refine((s) => /^[\p{L}\s\-'\.]+$/u.test(s), {
     message: "Congregation name can only contain letters, spaces, hyphens, apostrophes, and periods"
   });

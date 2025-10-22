@@ -63,8 +63,8 @@ export const COMMANDS = {
 
 // Validation Patterns
 export const PATTERNS = {
-  CONGREGATION: /^[a-zA-Z\s\-'\.]+$/,
-  PERSON_NAME: /^[a-zA-Z\s\-'\.]+$/,
+  CONGREGATION: /^[\p{L}\s\-'\.]+$/u,
+  PERSON_NAME: /^[\p{L}\s\-'\.]+$/u,
   PHONE_NUMBER: /^\d{10}$/,
   TAX_ID: /^\d{9}$|^\d{2}-\d{7}$/,
   AMOUNT: /^\$?(\d+(?:\.\d{2})?)$/

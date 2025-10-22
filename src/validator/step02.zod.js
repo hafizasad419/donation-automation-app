@@ -18,7 +18,7 @@ export const personNameSchema = z.string()
   .refine((s) => s.length >= 2, {
     message: "Person name must be at least 2 characters long"
   })
-  .refine((s) => /^[a-zA-Z\s\-'\.]+$/.test(s), {
+  .refine((s) => /^[\p{L}\s\-'\.]+$/u.test(s), {
     message: "Person name can only contain letters, spaces, hyphens, apostrophes, and periods"
   })
   .refine((s) => s.split(' ').length >= 2, {
