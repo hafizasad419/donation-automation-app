@@ -14,19 +14,42 @@ export async function handlePersonName(phone, text, session) {
     
     // Update session
     session.data.personName = parsed;
-    session.step = STEPS.PHONE_NUMBER;
     session.lastMessageAt = Date.now();
     
-    await setSession(phone, session);
-    logRedis("setSession", phone, true);
-    
-    // Send success message
-    const successMessage = MESSAGES.NAME_SUCCESS.replace("{person_name}", parsed);
-    await sendSms(phone, successMessage);
-    logTwilio("sendSms", phone, true);
-    
-    // Log message to sheets
-    await logMessage(phone, successMessage, "outbound", 2);
+    // Check if we're editing a field - if so, return to confirmation
+    if (session.editingField === "personName") {
+      session.step = STEPS.CONFIRMATION;
+      session.editingField = null; // Clear edit flag
+      await setSession(phone, session);
+      logRedis("setSession", phone, true);
+      
+      // Send updated confirmation summary
+      const summaryMessage = MESSAGES.CONFIRMATION_SUMMARY
+        .replace("{congregation}", session.data.congregation || "")
+        .replace("{person_name}", session.data.personName || "")
+        .replace("{tax_id}", session.data.taxId || "")
+        .replace("{amount}", session.data.amount || "");
+      
+      await sendSms(phone, summaryMessage);
+      logTwilio("sendSms", phone, true);
+      await logMessage(phone, summaryMessage, "outbound", STEPS.CONFIRMATION);
+      
+      logStep(phone, STEPS.CONFIRMATION, "Returned to confirmation after editing name");
+      return session;
+    } else {
+      // Normal flow - continue to next step
+      session.step = STEPS.PHONE_NUMBER;
+      await setSession(phone, session);
+      logRedis("setSession", phone, true);
+      
+      // Send success message
+      const successMessage = MESSAGES.NAME_SUCCESS.replace("{person_name}", parsed);
+      await sendSms(phone, successMessage);
+      logTwilio("sendSms", phone, true);
+      
+      // Log message to sheets
+      await logMessage(phone, successMessage, "outbound", STEPS.PHONE_NUMBER);
+    }
     
     logStep(phone, 2, "Person name processed successfully", { name: parsed });
     return session;

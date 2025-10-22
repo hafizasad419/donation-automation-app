@@ -14,19 +14,42 @@ export async function handleTaxId(phone, text, session) {
     
     // Update session
     session.data.taxId = parsed;
-    session.step = STEPS.AMOUNT;
     session.lastMessageAt = Date.now();
     
-    await setSession(phone, session);
-    logRedis("setSession", phone, true);
-    
-    // Send success message
-    const successMessage = MESSAGES.TAXID_SUCCESS.replace("{tax_id}", parsed);
-    await sendSms(phone, successMessage);
-    logTwilio("sendSms", phone, true);
-    
-    // Log message to sheets
-    await logMessage(phone, successMessage, "outbound", 4);
+    // Check if we're editing a field - if so, return to confirmation
+    if (session.editingField === "taxId") {
+      session.step = STEPS.CONFIRMATION;
+      session.editingField = null; // Clear edit flag
+      await setSession(phone, session);
+      logRedis("setSession", phone, true);
+      
+      // Send updated confirmation summary
+      const summaryMessage = MESSAGES.CONFIRMATION_SUMMARY
+        .replace("{congregation}", session.data.congregation || "")
+        .replace("{person_name}", session.data.personName || "")
+        .replace("{tax_id}", session.data.taxId || "")
+        .replace("{amount}", session.data.amount || "");
+      
+      await sendSms(phone, summaryMessage);
+      logTwilio("sendSms", phone, true);
+      await logMessage(phone, summaryMessage, "outbound", STEPS.CONFIRMATION);
+      
+      logStep(phone, STEPS.CONFIRMATION, "Returned to confirmation after editing tax ID");
+      return session;
+    } else {
+      // Normal flow - continue to next step
+      session.step = STEPS.AMOUNT;
+      await setSession(phone, session);
+      logRedis("setSession", phone, true);
+      
+      // Send success message
+      const successMessage = MESSAGES.TAXID_SUCCESS.replace("{tax_id}", parsed);
+      await sendSms(phone, successMessage);
+      logTwilio("sendSms", phone, true);
+      
+      // Log message to sheets
+      await logMessage(phone, successMessage, "outbound", STEPS.AMOUNT);
+    }
     
     logStep(phone, 4, "Tax ID processed successfully", { taxId: parsed });
     return session;

@@ -23,19 +23,40 @@ export async function handleCongregation(phone, text, session) {
     
     // Update session
     session.data.congregation = congregation;
-    session.step = STEPS.PERSON_NAME;
     session.lastMessageAt = Date.now();
     
-    await setSession(phone, session);
-    
-    // Send success response
-    const response = MESSAGES.CONGREGATION_SUCCESS.replace("{congregation}", congregation);
-    await sendSms(phone, response);
+    // Check if we're editing a field - if so, return to confirmation
+    if (session.editingField === "congregation") {
+      session.step = STEPS.CONFIRMATION;
+      session.editingField = null; // Clear edit flag
+      await setSession(phone, session);
+      
+      // Send updated confirmation summary
+      const summaryMessage = MESSAGES.CONFIRMATION_SUMMARY
+        .replace("{congregation}", session.data.congregation || "")
+        .replace("{person_name}", session.data.personName || "")
+        .replace("{tax_id}", session.data.taxId || "")
+        .replace("{amount}", session.data.amount || "");
+      
+      await sendSms(phone, summaryMessage);
+      await logMessage(phone, summaryMessage, "outbound", STEPS.CONFIRMATION);
+      
+      logStep(phone, STEPS.CONFIRMATION, "Returned to confirmation after editing congregation");
+      return session;
+    } else {
+      // Normal flow - continue to next step
+      session.step = STEPS.PERSON_NAME;
+      await setSession(phone, session);
+      
+      // Send success response
+      const response = MESSAGES.CONGREGATION_SUCCESS.replace("{congregation}", congregation);
+      await sendSms(phone, response);
+    }
     
     // Log message to sheets
-    await logMessage(phone, response, "outbound", STEPS.PERSON_NAME);
+    await logMessage(phone, response, "outbound", session.step);
     
-    logStep(phone, 1, "Congregation processed successfully", { congregation });
+    logStep(phone, session.step, "Congregation processed successfully", { congregation });
     return session;
     
   } catch (error) {

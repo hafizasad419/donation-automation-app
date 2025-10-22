@@ -15,24 +15,47 @@ export async function handleAmount(phone, text, session) {
     // Update session
     session.data.amount = parsed.formatted;
     session.data.amountNumeric = parsed.numeric;
-    session.step = STEPS.CONFIRMATION;
     session.lastMessageAt = Date.now();
     
-    await setSession(phone, session);
-    logRedis("setSession", phone, true);
-    
-    // Send confirmation summary
-    const summaryMessage = MESSAGES.CONFIRMATION_SUMMARY
-      .replace("{congregation}", session.data.congregation || "")
-      .replace("{person_name}", session.data.personName || "")
-      .replace("{tax_id}", session.data.taxId || "")
-      .replace("{amount}", parsed.formatted);
-    
-    await sendSms(phone, summaryMessage);
-    logTwilio("sendSms", phone, true);
-    
-    // Log message to sheets
-    await logMessage(phone, summaryMessage, "outbound", 5);
+    // Check if we're editing a field - if so, return to confirmation
+    if (session.editingField === "amount") {
+      session.step = STEPS.CONFIRMATION;
+      session.editingField = null; // Clear edit flag
+      await setSession(phone, session);
+      logRedis("setSession", phone, true);
+      
+      // Send updated confirmation summary
+      const summaryMessage = MESSAGES.CONFIRMATION_SUMMARY
+        .replace("{congregation}", session.data.congregation || "")
+        .replace("{person_name}", session.data.personName || "")
+        .replace("{tax_id}", session.data.taxId || "")
+        .replace("{amount}", parsed.formatted);
+      
+      await sendSms(phone, summaryMessage);
+      logTwilio("sendSms", phone, true);
+      await logMessage(phone, summaryMessage, "outbound", STEPS.CONFIRMATION);
+      
+      logStep(phone, STEPS.CONFIRMATION, "Returned to confirmation after editing amount");
+      return session;
+    } else {
+      // Normal flow - continue to confirmation
+      session.step = STEPS.CONFIRMATION;
+      await setSession(phone, session);
+      logRedis("setSession", phone, true);
+      
+      // Send confirmation summary
+      const summaryMessage = MESSAGES.CONFIRMATION_SUMMARY
+        .replace("{congregation}", session.data.congregation || "")
+        .replace("{person_name}", session.data.personName || "")
+        .replace("{tax_id}", session.data.taxId || "")
+        .replace("{amount}", parsed.formatted);
+      
+      await sendSms(phone, summaryMessage);
+      logTwilio("sendSms", phone, true);
+      
+      // Log message to sheets
+      await logMessage(phone, summaryMessage, "outbound", STEPS.CONFIRMATION);
+    }
     
     logStep(phone, 5, "Amount processed successfully", { amount: parsed.formatted });
     return session;

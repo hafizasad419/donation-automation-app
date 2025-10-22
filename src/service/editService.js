@@ -13,6 +13,7 @@ export async function handleEditRequest(phone, text, session) {
     // Handle different edit requests
     if (lowerText.includes("congregation") || lowerText.includes("organization")) {
       session.step = STEPS.CONGREGATION;
+      session.editingField = "congregation"; // Set flag to return to confirmation after edit
       await setSession(phone, session);
       logRedis("setSession", phone, true);
       
@@ -22,6 +23,7 @@ export async function handleEditRequest(phone, text, session) {
       
     } else if (lowerText.includes("name") || lowerText.includes("person")) {
       session.step = STEPS.PERSON_NAME;
+      session.editingField = "personName"; // Set flag to return to confirmation after edit
       await setSession(phone, session);
       logRedis("setSession", phone, true);
       
@@ -32,6 +34,7 @@ export async function handleEditRequest(phone, text, session) {
       
     } else if (lowerText.includes("phone") || lowerText.includes("number")) {
       session.step = STEPS.PHONE_NUMBER;
+      session.editingField = "personPhone"; // Set flag to return to confirmation after edit
       await setSession(phone, session);
       logRedis("setSession", phone, true);
       
@@ -42,6 +45,7 @@ export async function handleEditRequest(phone, text, session) {
       
     } else if (lowerText.includes("tax") || lowerText.includes("id")) {
       session.step = STEPS.TAX_ID;
+      session.editingField = "taxId"; // Set flag to return to confirmation after edit
       await setSession(phone, session);
       logRedis("setSession", phone, true);
       
@@ -52,6 +56,7 @@ export async function handleEditRequest(phone, text, session) {
       
     } else if (lowerText.includes("amount") || lowerText.includes("donation")) {
       session.step = STEPS.AMOUNT;
+      session.editingField = "amount"; // Set flag to return to confirmation after edit
       await setSession(phone, session);
       logRedis("setSession", phone, true);
       

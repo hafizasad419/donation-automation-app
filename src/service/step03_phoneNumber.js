@@ -14,19 +14,42 @@ export async function handlePhoneNumber(phone, text, session) {
     
     // Update session
     session.data.personPhone = parsed;
-    session.step = STEPS.TAX_ID;
     session.lastMessageAt = Date.now();
     
-    await setSession(phone, session);
-    logRedis("setSession", phone, true);
-    
-    // Send success message
-    const successMessage = MESSAGES.PHONE_SUCCESS.replace("{phone}", parsed);
-    await sendSms(phone, successMessage);
-    logTwilio("sendSms", phone, true);
-    
-    // Log message to sheets
-    await logMessage(phone, successMessage, "outbound", 3);
+    // Check if we're editing a field - if so, return to confirmation
+    if (session.editingField === "personPhone") {
+      session.step = STEPS.CONFIRMATION;
+      session.editingField = null; // Clear edit flag
+      await setSession(phone, session);
+      logRedis("setSession", phone, true);
+      
+      // Send updated confirmation summary
+      const summaryMessage = MESSAGES.CONFIRMATION_SUMMARY
+        .replace("{congregation}", session.data.congregation || "")
+        .replace("{person_name}", session.data.personName || "")
+        .replace("{tax_id}", session.data.taxId || "")
+        .replace("{amount}", session.data.amount || "");
+      
+      await sendSms(phone, summaryMessage);
+      logTwilio("sendSms", phone, true);
+      await logMessage(phone, summaryMessage, "outbound", STEPS.CONFIRMATION);
+      
+      logStep(phone, STEPS.CONFIRMATION, "Returned to confirmation after editing phone");
+      return session;
+    } else {
+      // Normal flow - continue to next step
+      session.step = STEPS.TAX_ID;
+      await setSession(phone, session);
+      logRedis("setSession", phone, true);
+      
+      // Send success message
+      const successMessage = MESSAGES.PHONE_SUCCESS.replace("{phone}", parsed);
+      await sendSms(phone, successMessage);
+      logTwilio("sendSms", phone, true);
+      
+      // Log message to sheets
+      await logMessage(phone, successMessage, "outbound", STEPS.TAX_ID);
+    }
     
     logStep(phone, 3, "Phone number processed successfully", { phone: parsed });
     return session;
