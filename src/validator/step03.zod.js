@@ -7,13 +7,17 @@ export const phoneNumberSchema = z.string()
     // Remove all non-digit characters
     return s.replace(/\D/g, "");
   })
-  .refine((s) => s.length === 10, {
-    message: "Phone number must be exactly 10 digits"
+  .refine((s) => s.length >= 9, {
+    message: "Phone number must have at least 9 digits"
   })
-  .refine((s) => /^\d{10}$/.test(s), {
+  .refine((s) => /^\d+$/.test(s), {
     message: "Phone number must contain only digits"
   })
   .transform((s) => {
-    // Format as XXX-XXX-XXXX
-    return `${s.slice(0, 3)}-${s.slice(3, 6)}-${s.slice(6)}`;
+    // If 10 digits, format as XXX-XXX-XXXX
+    if (s.length === 10) {
+      return `${s.slice(0, 3)}-${s.slice(3, 6)}-${s.slice(6)}`;
+    }
+    // For other lengths, return as-is
+    return s;
   });
