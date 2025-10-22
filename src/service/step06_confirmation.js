@@ -76,7 +76,15 @@ export async function handleConfirmation(phone, text, session) {
             };
             stepHandler = "handlePersonName";
             break;
-          case 3: // Tax ID
+          case 3: // Phone Number
+            fieldName = "personPhone";
+            validationFunction = async (value) => {
+              const { phoneNumberSchema } = await import("../validator/step03.zod.js");
+              return phoneNumberSchema.parse(value);
+            };
+            stepHandler = "handlePhoneNumber";
+            break;
+          case 4: // Tax ID
             fieldName = "taxId";
             validationFunction = async (value) => {
               const { taxIdSchema } = await import("../validator/step04.zod.js");
@@ -84,7 +92,7 @@ export async function handleConfirmation(phone, text, session) {
             };
             stepHandler = "handleTaxId";
             break;
-          case 4: // Amount
+          case 5: // Amount
             fieldName = "amount";
             validationFunction = async (value) => {
               const { amountSchema } = await import("../validator/step05.zod.js");
@@ -94,7 +102,7 @@ export async function handleConfirmation(phone, text, session) {
             break;
           default:
             // Invalid field number
-            await sendSms(phone, "Please enter a number between 1-4 followed by the new value (e.g., '2. Moshe Kohn')");
+            await sendSms(phone, "Please enter a number between 1-5 followed by the new value (e.g., '2. Moshe Kohn')");
             logTwilio("sendSms", phone, true);
             await logMessage(phone, "Invalid field number", "outbound", 6);
             return session;
@@ -121,6 +129,7 @@ export async function handleConfirmation(phone, text, session) {
             const summaryMessage = MESSAGES.CONFIRMATION_SUMMARY
               .replace("{congregation}", session.data.congregation || "")
               .replace("{person_name}", session.data.personName || "")
+              .replace("{personPhone}", session.data.personPhone || "")
               .replace("{tax_id}", session.data.taxId || "")
               .replace("{amount}", session.data.amount || "");
             
