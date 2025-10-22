@@ -56,7 +56,7 @@ export async function handleFinishRequest(phone, session) {
           message = "What's the person's full name?";
           break;
         case STEPS.PHONE_NUMBER:
-          message = "Please send the person's phone number (10 digits, like 12124441100).";
+          message = "Please send the person's phone number (10 digits, like 2124441100).";
           break;
         case STEPS.TAX_ID:
           message = "Please send the Tax ID (9 digits, like 123456789 or 12-3456789).";

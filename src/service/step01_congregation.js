@@ -51,13 +51,13 @@ export async function handleCongregation(phone, text, session) {
       // Send success response
       const response = MESSAGES.CONGREGATION_SUCCESS.replace("{congregation}", congregation);
       await sendSms(phone, response);
+      
+      // Log message to sheets
+      await logMessage(phone, response, "outbound", STEPS.PERSON_NAME);
+      
+      logStep(phone, STEPS.PERSON_NAME, "Congregation processed successfully", { congregation });
+      return session;
     }
-    
-    // Log message to sheets
-    await logMessage(phone, response, "outbound", session.step);
-    
-    logStep(phone, session.step, "Congregation processed successfully", { congregation });
-    return session;
     
   } catch (error) {
     logStep(phone, 1, "Congregation validation failed", { error: error.message });

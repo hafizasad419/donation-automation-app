@@ -38,7 +38,7 @@ export async function handleEditRequest(phone, text, session) {
       await setSession(phone, session);
       logRedis("setSession", phone, true);
       
-      const message = "Please send the person's phone number (10 digits, like 12124441100).";
+      const message = "Please send the person's phone number (10 digits, like 2124441100).";
       await sendSms(phone, message);
       logTwilio("sendSms", phone, true);
       await logMessage(phone, message, "outbound", STEPS.PHONE_NUMBER);

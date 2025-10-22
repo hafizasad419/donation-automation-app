@@ -1,5 +1,5 @@
 import { sendSms } from "../lib/twilio.js";
-import { setSession } from "../lib/redis.js";
+import { setSession, deleteSession } from "../lib/redis.js";
 import { appendDonationRecord, generateRecordId } from "../lib/sheets.js";
 import { logMessage } from "../lib/sheets.js";
 import { logStep, logRedis, logTwilio } from "../lib/logger.js";
@@ -40,13 +40,9 @@ export async function handleConfirmation(phone, text, session) {
       await logMessage(phone, successMessage, "outbound", 6);
       console.log(`✅ [SUCCESS] Donation completion message sent and logged for ${phone}`);
       
-      // Set session to waiting for new entry instead of clearing
-      session.step = STEPS.GREETING; // Reset to greeting step
-      session.data = {}; // Clear data
-      session.waitingForNewEntry = true; // Set flag to wait for new entry response
-      session.lastMessageAt = Date.now();
-      await setSession(phone, session);
-      logRedis("setSession", phone, true);
+      // Clear the session completely after successful donation
+      await deleteSession(phone);
+      logRedis("deleteSession", phone, true);
       
       logStep(phone, 6, "Donation confirmed and saved", { recordId, record });
       return session;
