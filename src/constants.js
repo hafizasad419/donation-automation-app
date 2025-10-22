@@ -50,9 +50,9 @@ export const MESSAGES = {
 
 // Command Patterns
 export const COMMANDS = {
-  GREETING: /^(hi|hello|hey|good morning|good afternoon|good evening|greetings|hi there|hello there)$/i,
+  GREETING: /^(hi!?|hello!?|hey!?|good morning|good afternoon|good evening|greetings|hi there|hello there|start)$/i,
   START_OVER: /^(start over|restart|begin again|new entry|start again)$/i,
-  CANCEL: /^(cancel|stop|quit|end)$/i,
+  CANCEL: /^(cancel|stop|quit|end|unstop)$/i,
   YES: /^(yes|yeah|yep|y|correct|right|ok|okay|confirm|yes\s*,?\s*that'?s?\s*correct|that'?s?\s*correct|looks?\s*good|perfect|sounds?\s*good)/i,
   NO: /^(no|nope|n|incorrect|wrong|fix|change)$/i,
   END_CONVERSATION: /^(no|nope|n|thanks|thank you|that'?s?\s*all|done|finished|goodbye|bye)$/i,

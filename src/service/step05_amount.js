@@ -47,6 +47,7 @@ export async function handleAmount(phone, text, session) {
       const summaryMessage = MESSAGES.CONFIRMATION_SUMMARY
         .replace("{congregation}", session.data.congregation || "")
         .replace("{person_name}", session.data.personName || "")
+        .replace("{personPhone}", session.data.personPhone || "")
         .replace("{tax_id}", session.data.taxId || "")
         .replace("{amount}", parsed.formatted);
       
