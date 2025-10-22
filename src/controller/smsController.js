@@ -195,6 +195,7 @@ export async function handleIncomingSms(req, res) {
       if (result) {
         session = result;
       }
+      return res.status(200).send("");
     } else if (COMMANDS.NEW.test(body)) {
       // Clear session completely and start fresh
       await deleteSession(from);

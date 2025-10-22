@@ -39,7 +39,7 @@ export const MESSAGES = {
   CONFIRMATION_CHANGE: "Please reply \"Yes\" to confirm or tell me what to change.",
   CONVERSATION_END: "Okay, thank you for your donation! Have a great day!",
 
-  TIMEOUT_MESSAGE: "Still with me? Would you like to finish entering this donation or start over?",
+  TIMEOUT_MESSAGE: "Still with me? Send 'continue' to continue entering this donation or send 'start over' to start over?",
   CANCEL_MESSAGE: "Okay, I've stopped and nothing was saved.\nYou can start again anytime by saying \"New entry.\"",
 
   START_OVER_CONFIRM: "You're about to start fresh and discard what we already filled in.\nAre you sure you want to start over?\n(Reply \"Yes\" to restart, or \"No\" to continue.)",
@@ -57,7 +57,7 @@ export const COMMANDS = {
   NO: /^(no|nope|n|incorrect|wrong|fix|change)$/i,
   END_CONVERSATION: /^(no|nope|n|thanks|thank you|that'?s?\s*all|done|finished|goodbye|bye)$/i,
   CHANGE: /^(change|edit|fix|update|modify)\s+/i,
-  FINISH: /^(finish|continue|complete)$/i,
+  FINISH: /^(finish|continue|complete|finish this|continue this)$/i,
   NEW: /^(new|new entry|start over|restart)$/i
 };
 
