@@ -1,7 +1,7 @@
 import { sendSms } from "../lib/twilio.js";
 import { setSession } from "../lib/redis.js";
 import { logMessage } from "../lib/sheets.js";
-import { logStep, logTwilio } from "../lib/logger.js";
+import { logStep, logTwilio, logRedis } from "../lib/logger.js";
 import { MESSAGES, STEPS } from "../constants.js";
 
 export async function handleNewEntryMidway(phone, session) {
@@ -67,6 +67,11 @@ export async function handleFinishRequest(phone, session) {
         default:
           message = MESSAGES.START;
       }
+      
+      // Update session timestamp
+      session.lastMessageAt = Date.now();
+      await setSession(phone, session);
+      logRedis("setSession", phone, true);
       
       await sendSms(phone, message);
       logTwilio("sendSms", phone, true);
