@@ -35,8 +35,10 @@ export async function handleCongregation(phone, text, session) {
       const summaryMessage = MESSAGES.CONFIRMATION_SUMMARY
         .replace("{congregation}", session.data.congregation || "")
         .replace("{person_name}", session.data.personName || "")
+        .replace("{personPhone}", session.data.personPhone || "")
         .replace("{tax_id}", session.data.taxId || "")
-        .replace("{amount}", session.data.amount || "");
+        .replace("{amount}", session.data.amount || "")
+        .replace("{note}", session.data.note || "");
       
       await sendSms(phone, summaryMessage);
       await logMessage(phone, summaryMessage, "outbound", STEPS.CONFIRMATION);

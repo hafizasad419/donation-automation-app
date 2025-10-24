@@ -11,7 +11,8 @@ import { handlePersonName } from "../service/step02_personName.js";
 import { handlePhoneNumber } from "../service/step03_phoneNumber.js";
 import { handleTaxId } from "../service/step04_taxId.js";
 import { handleAmount } from "../service/step05_amount.js";
-import { handleConfirmation } from "../service/step06_confirmation.js";
+import { handleNote } from "../service/step06_note.js";
+import { handleConfirmation } from "../service/step07_confirmation.js";
 
 // Import utility services
 import { handleEditRequest } from "../service/editService.js";
@@ -263,6 +264,9 @@ export async function handleIncomingSms(req, res) {
           break;
         case STEPS.AMOUNT:
           result = await handleAmount(from, body, session);
+          break;
+        case STEPS.NOTE:
+          result = await handleNote(from, body, session);
           break;
         case STEPS.CONFIRMATION:
           result = await handleConfirmation(from, body, session);

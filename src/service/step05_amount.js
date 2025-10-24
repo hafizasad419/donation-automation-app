@@ -28,8 +28,10 @@ export async function handleAmount(phone, text, session) {
       const summaryMessage = MESSAGES.CONFIRMATION_SUMMARY
         .replace("{congregation}", session.data.congregation || "")
         .replace("{person_name}", session.data.personName || "")
+        .replace("{personPhone}", session.data.personPhone || "")
         .replace("{tax_id}", session.data.taxId || "")
-        .replace("{amount}", parsed.formatted);
+        .replace("{amount}", parsed.formatted)
+        .replace("{note}", session.data.note || "");
       
       await sendSms(phone, summaryMessage);
       logTwilio("sendSms", phone, true);
@@ -38,24 +40,17 @@ export async function handleAmount(phone, text, session) {
       logStep(phone, STEPS.CONFIRMATION, "Returned to confirmation after editing amount");
       return session;
     } else {
-      // Normal flow - continue to confirmation
-      session.step = STEPS.CONFIRMATION;
+      // Normal flow - continue to note step
+      session.step = STEPS.NOTE;
       await setSession(phone, session);
       logRedis("setSession", phone, true);
       
-      // Send confirmation summary
-      const summaryMessage = MESSAGES.CONFIRMATION_SUMMARY
-        .replace("{congregation}", session.data.congregation || "")
-        .replace("{person_name}", session.data.personName || "")
-        .replace("{personPhone}", session.data.personPhone || "")
-        .replace("{tax_id}", session.data.taxId || "")
-        .replace("{amount}", parsed.formatted);
-      
-      await sendSms(phone, summaryMessage);
+      // Send note prompt
+      await sendSms(phone, MESSAGES.NOTE_PROMPT);
       logTwilio("sendSms", phone, true);
       
       // Log message to sheets
-      await logMessage(phone, summaryMessage, "outbound", STEPS.CONFIRMATION);
+      await logMessage(phone, MESSAGES.NOTE_PROMPT, "outbound", STEPS.NOTE);
     }
     
     logStep(phone, 5, "Amount processed successfully", { amount: parsed.formatted });
