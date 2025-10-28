@@ -25,11 +25,19 @@ export async function handleConfirmation(phone, text, session) {
         session.data.personPhone || "",
         session.data.taxId || "",
         session.data.amount || "",
-        session.data.amountNumeric || 0,
-        session.data.note || ""  // Add note field
+        session.data.note || ""  // Note field
       ];
       
-      await appendDonationRecord(record);
+      try {
+        const appendResult = await appendDonationRecord(record);
+        console.log(`✅ [SUCCESS] Record append completed for ${recordId}`);
+        console.log(`🔍 [DEBUG] Append result:`, JSON.stringify(appendResult, null, 2));
+      } catch (appendError) {
+        console.error(`❌ [ERROR] Failed to append record ${recordId} to sheets:`, appendError);
+        console.error(`❌ [ERROR] Record data was:`, JSON.stringify(record, null, 2));
+        // Re-throw to let the outer catch handle it
+        throw appendError;
+      }
       
       // Send success message
       const successMessage = MESSAGES.CONFIRMATION_SUCCESS.replace("{record_id}", recordId);

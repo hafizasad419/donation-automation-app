@@ -43,13 +43,62 @@ export async function getSheetsClient() {
   }
 }
 
+// Helper function to find the last row with actual data (ignoring checkbox-only rows)
+async function findLastDataRow(client, sheetName) {
+  try {
+    // Read a large range to find the last row with data
+    // We read columns A-H only (ignoring I which has checkboxes)
+    const range = `${sheetName}!A:H`;
+    const response = await client.spreadsheets.values.get({
+      spreadsheetId: SHEET_ID,
+      range: range
+    });
+
+    const rows = response.data.values || [];
+    
+    // Find the last row where at least one column (A-H) has data
+    // Start from the bottom and work up
+    let lastRowWithData = 0;
+    
+    for (let i = rows.length - 1; i >= 0; i--) {
+      const row = rows[i];
+      // Check if any column (A-H) has actual data (not just whitespace)
+      const hasData = row && row.some((cell, index) => {
+        // Only check columns A-H (indices 0-7)
+        if (index >= 8) return false;
+        // Check if cell has meaningful data (not empty, not just whitespace)
+        return cell && String(cell).trim().length > 0;
+      });
+      
+      if (hasData) {
+        lastRowWithData = i + 1; // +1 because rows are 1-indexed in Sheets
+        break;
+      }
+    }
+    
+    console.log(`🔍 [DEBUG] Found last row with data: ${lastRowWithData} (total rows checked: ${rows.length})`);
+    return lastRowWithData;
+  } catch (error) {
+    console.error('❌ Error finding last data row:', error);
+    // Default to 1 if we can't read (assumes header row)
+    return 1;
+  }
+}
+
 // Append a donation record to Google Sheets
 // Uses SHEET_RANGE_DONATIONS environment variable
-// Expected structure: Record ID, Congregation, Person Name, Phone, Tax ID, Amount, Timestamp
+// Expected structure: Record ID, Congregation, Person Name, Phone, Tax ID, Amount, Timestamp, Note
 export async function appendDonationRecord(record) {
   try {
     const client = await getSheetsClient();
-    const [recordId, congregation, personName, phone, taxId, amount] = record;
+    const [recordId, congregation, personName, phone, taxId, amount, note] = record;
+    
+    // Extract sheet name from SHEET_RANGE_DONATIONS (e.g., "Donations" from "Donations!A:H")
+    const sheetName = SHEET_RANGE_DONATIONS.split('!')[0];
+    
+    // Find the last row with actual data
+    const lastRow = await findLastDataRow(client, sheetName);
+    const nextRow = lastRow + 1;
     
     const values = [
       [
@@ -59,21 +108,48 @@ export async function appendDonationRecord(record) {
         phone || "",
         taxId || "",
         amount || "",
-        new Date().toISOString()
+        new Date().toISOString(),
+        note || "",
       ]
     ];
 
-    const response = await client.spreadsheets.values.append({
+    // Build the range for the specific row (e.g., "Donations!A4:H4")
+    const targetRange = `${sheetName}!A${nextRow}:H${nextRow}`;
+
+    console.log(`🔍 [DEBUG] Appending donation record to row ${nextRow} (${targetRange}):`, JSON.stringify(values, null, 2));
+    console.log(`🔍 [DEBUG] Record structure:`, {
+      recordId,
+      congregation,
+      personName,
+      phone,
+      taxId,
+      amount,
+      note,
+      valuesCount: values[0].length,
+      expectedColumns: ['A: Record ID', 'B: Congregation', 'C: Person Name', 'D: Phone', 'E: Tax ID', 'F: Amount', 'G: Timestamp', 'H: Note'],
+      lastRowWithData: lastRow,
+      targetRow: nextRow
+    });
+
+    // Use update instead of append to write to a specific row
+    const response = await client.spreadsheets.values.update({
       spreadsheetId: SHEET_ID,
-      range: SHEET_RANGE_DONATIONS,
+      range: targetRange,
       valueInputOption: "USER_ENTERED",
       requestBody: { values }
     });
 
-    console.log(`✅ Donation record appended to sheets: ${recordId}`);
+    console.log(`✅ Donation record appended to sheets at row ${nextRow}: ${recordId}`);
+    console.log(`🔍 [DEBUG] Google Sheets API response:`, JSON.stringify(response.data, null, 2));
     return response.data;
   } catch (error) {
     console.error('❌ Failed to append donation record to sheets:', error);
+    console.error('❌ Error details:', {
+      message: error.message,
+      code: error.code,
+      errors: error.errors,
+      stack: error.stack
+    });
     throw error;
   }
 }

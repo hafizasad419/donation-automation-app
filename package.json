@@ -12,7 +12,8 @@
     "test:connections": "node scripts/test-connections.js",
     "test:cli": "node test/cli-test.js",
     "test:setup": "node test/test-simple.js",
-    "test:interactive": "node test/example-flow.js"
+    "test:interactive": "node test/example-flow.js",
+    "test:sheets": "node scripts/test-sheets-append.js"
   },
   "keywords": [],
   "author": "",
