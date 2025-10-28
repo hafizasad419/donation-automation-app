@@ -18,8 +18,8 @@ function normalizePhoneNumber(phoneNumber) {
     }
 
     // Convert to string if it's a number (Google Sheets sends numbers)
-    let phoneStr = typeof phoneNumber === 'number' 
-        ? phoneNumber.toString() 
+    let phoneStr = typeof phoneNumber === 'number'
+        ? phoneNumber.toString()
         : String(phoneNumber);
 
     // Remove all non-digit characters (except leading +)
@@ -114,10 +114,12 @@ export const sendDonationConfirmationToDonor = async (req, res) => {
 
         // Send confirmation message
         // Ensure amount is formatted properly (handle both number and string)
-        const amountFormatted = typeof req.body.amount === 'number' 
-            ? req.body.amount 
+        const amountFormatted = typeof req.body.amount === 'number'
+            ? req.body.amount
             : parseFloat(req.body.amount) || req.body.amount;
-        const confirmationMessage = `Thank you ${req.body.name}! Your donation of $${amountFormatted} has been confirmed. We appreciate your generosity.`;
+        // const confirmationMessage = `Thank you ${req.body.name}! Your donation of $${amountFormatted} has been confirmed. We appreciate your generosity.`;
+
+        const confirmationMessage = `Hello ${req.body.name} this is a message from Yakov Aron Wetzberger's, this is to notify you that we have just processed the donation, which was made for (${req.body.congregation}) in the amount of ${amountFormatted}, Loads of Hatzlacha!`;
 
         // Using our existing SMS service with normalized phone number
         await sendSms(normalizedPhone, confirmationMessage);

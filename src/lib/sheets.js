@@ -110,11 +110,12 @@ export async function appendDonationRecord(record) {
         amount || "",
         new Date().toISOString(),
         note || "",
+        false  // Column I: STATUS checkbox (unchecked) - boolean false, not string
       ]
     ];
 
-    // Build the range for the specific row (e.g., "Donations!A4:H4")
-    const targetRange = `${sheetName}!A${nextRow}:H${nextRow}`;
+    // Build the range for the specific row including column I (e.g., "Donations!A4:I4")
+    const targetRange = `${sheetName}!A${nextRow}:I${nextRow}`;
 
     console.log(`🔍 [DEBUG] Appending donation record to row ${nextRow} (${targetRange}):`, JSON.stringify(values, null, 2));
     console.log(`🔍 [DEBUG] Record structure:`, {
@@ -125,8 +126,9 @@ export async function appendDonationRecord(record) {
       taxId,
       amount,
       note,
+      status: 'unchecked (false boolean)',
       valuesCount: values[0].length,
-      expectedColumns: ['A: Record ID', 'B: Congregation', 'C: Person Name', 'D: Phone', 'E: Tax ID', 'F: Amount', 'G: Timestamp', 'H: Note'],
+      expectedColumns: ['A: Record ID', 'B: Congregation', 'C: Person Name', 'D: Phone', 'E: Tax ID', 'F: Amount', 'G: Timestamp', 'H: Note', 'I: STATUS (checkbox - unchecked)'],
       lastRowWithData: lastRow,
       targetRow: nextRow
     });
