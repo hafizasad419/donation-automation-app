@@ -6,24 +6,30 @@ import { sendSms } from '../lib/twilio.js';
  * - With/without country code
  * - With/without plus sign
  * - With/without formatting (parentheses, dashes, spaces)
+ * - Numbers or strings from Google Sheets
  * - Always returns in +1234567890 format (US numbers assumed)
- * @param {string} phoneNumber - Phone number in any format
+ * @param {string|number} phoneNumber - Phone number in any format (string or number)
  * @returns {string} Normalized phone number in +1234567890 format
  */
 function normalizePhoneNumber(phoneNumber) {
-    // Guard clause - validate input
-    if (!phoneNumber || typeof phoneNumber !== 'string') {
-        throw new Error('Phone number is required and must be a string');
+    // Guard clause - validate input exists
+    if (phoneNumber === null || phoneNumber === undefined) {
+        throw new Error('Phone number is required');
     }
 
+    // Convert to string if it's a number (Google Sheets sends numbers)
+    let phoneStr = typeof phoneNumber === 'number' 
+        ? phoneNumber.toString() 
+        : String(phoneNumber);
+
     // Remove all non-digit characters (except leading +)
-    let cleaned = phoneNumber.trim();
+    let cleaned = phoneStr.trim();
     const hasLeadingPlus = cleaned.startsWith('+');
     cleaned = cleaned.replace(/\D/g, '');
 
     // Guard clause - ensure we have digits
     if (!cleaned || cleaned.length < 10) {
-        throw new Error(`Invalid phone number: must contain at least 10 digits (received: ${phoneNumber})`);
+        throw new Error(`Invalid phone number: must contain at least 10 digits (received: ${phoneStr})`);
     }
 
     // Handle various formats
@@ -74,7 +80,7 @@ function normalizePhoneNumber(phoneNumber) {
     }
 
     // Final fallback - should not reach here due to earlier guard clause
-    throw new Error(`Unable to normalize phone number: ${phoneNumber}`);
+    throw new Error(`Unable to normalize phone number: ${phoneStr}`);
 }
 
 // Google Sheets webhook endpoint
@@ -107,7 +113,11 @@ export const sendDonationConfirmationToDonor = async (req, res) => {
         }
 
         // Send confirmation message
-        const confirmationMessage = `Thank you ${req.body.name}! Your donation of ${req.body.amount} has been confirmed. We appreciate your generosity.`;
+        // Ensure amount is formatted properly (handle both number and string)
+        const amountFormatted = typeof req.body.amount === 'number' 
+            ? req.body.amount 
+            : parseFloat(req.body.amount) || req.body.amount;
+        const confirmationMessage = `Thank you ${req.body.name}! Your donation of $${amountFormatted} has been confirmed. We appreciate your generosity.`;
 
         // Using our existing SMS service with normalized phone number
         await sendSms(normalizedPhone, confirmationMessage);
