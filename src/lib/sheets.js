@@ -78,6 +78,12 @@ export async function appendDonationRecord(record) {
   }
 }
 
+
+
+
+
+
+
 // Log message to Messages sheet
 // Uses SHEET_RANGE_MESSAGES environment variable
 // Expected structure: Timestamp, Phone Number, Direction (inbound/outbound), Step, Message Content

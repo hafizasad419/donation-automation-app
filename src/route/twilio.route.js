@@ -1,7 +1,7 @@
-import express from 'express';
+import { Router } from 'express';
 import { handleIncomingSms, handleInactivityCheck } from '../controller/smsController.js';
 
-const router = express.Router();
+const router = Router();
 
 // Twilio webhook endpoint
 router.post('/twilio', async (req, res) => {

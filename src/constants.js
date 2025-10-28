@@ -34,7 +34,7 @@ export const MESSAGES = {
   AMOUNT_SUCCESS: "Perfect — I've got the Tax ID as {tax_id}.\nWhat's the donation amount?\n(You can write 125, $125, or $125.00)\nIf you'd like to change something earlier, you can still say \"Change the congregation\" or \"Go back.\"",
   AMOUNT_INVALID: "Please write the number as digits, like 180 or $180.00.\nWhat's the donation amount?",
 
-  NOTE_PROMPT: "Would you like to add a note or memo for this donation? (You can say 'skip' or 'no' to continue without a note)",
+  NOTE_PROMPT: "If you would like to add a note or memo for this donation, Reply with a note (You can say 'skip' or 'no' to continue without a note)",
   NOTE_SUCCESS: "Thanks! I've noted: {note}\nNow let's confirm everything...",
   NOTE_SKIP: "No problem, continuing without a note...",
   NOTE_INVALID: "Please provide a note or say 'skip' to continue without a note.",

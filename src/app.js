@@ -9,6 +9,7 @@ import { DEBUG, NODE_ENV } from './config/index.js';
 // route imports
 import testRoutes from './route/test.route.js';
 import twilioRoutes from './route/twilio.route.js';
+import sheetRoutes from './route/sheet.route.js';
 
 const app = express();
 
@@ -103,6 +104,7 @@ app.use('/api/v1/test', testRoutes);
 // Initialize Twilio routes
 app.use('/api', twilioRoutes);
 
-
+// Initialize Sheet routes
+app.use('/api/sheets', sheetRoutes);
 
 export default app;
