@@ -119,7 +119,7 @@ export const sendDonationConfirmationToDonor = async (req, res) => {
             : parseFloat(req.body.amount) || req.body.amount;
         // const confirmationMessage = `Thank you ${req.body.name}! Your donation of $${amountFormatted} has been confirmed. We appreciate your generosity.`;
 
-        const confirmationMessage = `Hello ${req.body.name} this is a message from Yakov Aron Wetzberger's, this is to notify you that we have just processed the donation, which was made for (${req.body.congregation}) in the amount of ${amountFormatted}, Loads of Hatzlacha!`;
+        const confirmationMessage = `Hello ${req.body.name} this is a message from Yakov Aron Wetzberger's, this is to notify you that we have just processed the donation, which was made for (${req.body.congregation}) in the amount of $${amountFormatted}, Loads of Hatzlacha!`;
 
         // Using our existing SMS service with normalized phone number
         await sendSms(normalizedPhone, confirmationMessage);
