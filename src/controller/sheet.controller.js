@@ -107,7 +107,7 @@ export const sendDonationConfirmationToDonor = async (req, res) => {
         }
 
         // Send confirmation message
-        const confirmationMessage = `Thank you ${req.body.name}! Your donation of $${req.body.amount} has been confirmed. We appreciate your generosity.`;
+        const confirmationMessage = `Thank you ${req.body.name}! Your donation of ${req.body.amount} has been confirmed. We appreciate your generosity.`;
 
         // Using our existing SMS service with normalized phone number
         await sendSms(normalizedPhone, confirmationMessage);

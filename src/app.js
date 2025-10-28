@@ -24,14 +24,14 @@ app.use(cors({
     origin: function (origin, callback) {
         // Allow requests with no origin (Postman, curl, mobile apps)
         if (!origin) return callback(null, true);
-        
+
         const allowedOrigins = [
             "https://vireact.io",
             "https://www.vireact.io",
             "http://localhost:5173",
             "http://192.168.1.112:5173"
         ];
-        
+
         // Allow all Twilio webhook domains and testing tools
         const isTwilioWebhook = origin && (
             origin.includes('twilio.com') ||
@@ -44,23 +44,33 @@ app.use(cors({
             origin.includes('localhost') ||
             origin.includes('127.0.0.1')
         );
-        
-        if (allowedOrigins.includes(origin) || isTwilioWebhook) {
+
+        // Allow Google Apps Script domains
+        const isGoogleAppsScript = origin && (
+            origin.includes('script.googleusercontent.com') ||
+            origin.includes('script.google.com') ||
+            origin.includes('googleusercontent.com') ||
+            origin.includes('googleapis.com') ||
+            origin.includes('google.com')
+        );
+
+
+        if (allowedOrigins.includes(origin) || isTwilioWebhook || isGoogleAppsScript) {
             return callback(null, true);
         }
-        
+
         // For development, allow all origins
         if (NODE_ENV === 'development' || DEBUG === 'true') {
             return callback(null, true);
         }
-        
+
         callback(new Error('Not allowed by CORS'));
     },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
     allowedHeaders: [
-        'Content-Type', 
-        'Authorization', 
+        'Content-Type',
+        'Authorization',
         'X-Requested-With',
         'X-Twilio-Signature',
         'X-Twilio-Webhook-Event',
