@@ -57,6 +57,74 @@ export async function handleConfirmation(phone, text, session) {
       return session;
       
     } else {
+      // Check if this is a number-only edit request (e.g., "6")
+      const numberOnlyMatch = text.match(/^(\d+)$/);
+      if (numberOnlyMatch) {
+        const fieldNumber = parseInt(numberOnlyMatch[1]);
+        
+        // Map field numbers to field names and steps
+        let fieldName = null;
+        let targetStep = null;
+        let promptMessage = "";
+        
+        switch (fieldNumber) {
+          case 1: // Congregation
+            fieldName = "congregation";
+            targetStep = STEPS.CONGREGATION;
+            promptMessage = "What's the congregation or organization name?";
+            break;
+          case 2: // Person Name
+            fieldName = "personName";
+            targetStep = STEPS.PERSON_NAME;
+            promptMessage = "What's the person's full name?";
+            break;
+          case 3: // Phone Number
+            fieldName = "personPhone";
+            targetStep = STEPS.PHONE_NUMBER;
+            promptMessage = "Please send the person's phone number (like 2124441100).";
+            break;
+          case 4: // Tax ID
+            fieldName = "taxId";
+            targetStep = STEPS.TAX_ID;
+            promptMessage = "Please send the Tax ID (9 digits, like 123456789 or 12-3456789).";
+            break;
+          case 5: // Amount
+            fieldName = "amount";
+            targetStep = STEPS.AMOUNT;
+            promptMessage = "What's the donation amount? (You can write 125, $125, or $125.00)";
+            break;
+          case 6: // Note
+            fieldName = "note";
+            targetStep = STEPS.NOTE;
+            promptMessage = MESSAGES.NOTE_PROMPT;
+            break;
+          default:
+            // Invalid field number
+            await sendSms(phone, "Please enter a number between 1-6.");
+            logTwilio("sendSms", phone, true);
+            await logMessage(phone, "Invalid field number for number-only edit", "outbound", 7);
+            logStep(phone, 7, "Invalid field number in number-only edit", { fieldNumber });
+            return session;
+        }
+        
+        if (fieldName && targetStep !== null) {
+          // Set session to editing mode
+          session.editingField = fieldName;
+          session.step = targetStep;
+          session.lastMessageAt = Date.now();
+          await setSession(phone, session);
+          logRedis("setSession", phone, true);
+          
+          // Send prompt for the field
+          await sendSms(phone, promptMessage);
+          logTwilio("sendSms", phone, true);
+          await logMessage(phone, promptMessage, "outbound", targetStep);
+          
+          logStep(phone, targetStep, `Number-only edit initiated for field ${fieldNumber}`, { fieldName });
+          return session;
+        }
+      }
+      
       // Check if this is a numbered edit request (e.g., "2. Asad Riaz")
       const numberedEditMatch = text.match(/^(\d+)\.\s*(.+)$/);
       if (numberedEditMatch) {
