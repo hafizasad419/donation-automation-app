@@ -13,6 +13,45 @@ import { MESSAGE_SENDING_PLATFORMS } from "../constants.js";
 // Twilio client instance (lazy initialization)
 let twilioClientInstance = null;
 
+/**
+ * Build comparable phone formats for robust matching.
+ * @param {string} phone
+ * @returns {string[]}
+ */
+export function buildPhoneFormatVariants(phone) {
+  const rawPhone = (phone || "").toString().trim();
+  if (!rawPhone) {
+    return [];
+  }
+
+  const variants = new Set([rawPhone]);
+  const digitsOnly = rawPhone.replace(/\D/g, "");
+  if (!digitsOnly) {
+    return Array.from(variants);
+  }
+
+  variants.add(digitsOnly);
+
+  const localTenDigit =
+    digitsOnly.length === 10
+      ? digitsOnly
+      : digitsOnly.length === 11 && digitsOnly.startsWith("1")
+      ? digitsOnly.slice(1)
+      : null;
+
+  if (!localTenDigit) {
+    return Array.from(variants);
+  }
+
+  variants.add(localTenDigit);
+  variants.add(`1${localTenDigit}`);
+  variants.add(`+1${localTenDigit}`);
+  variants.add(`${localTenDigit.slice(0, 3)}-${localTenDigit.slice(3, 6)}-${localTenDigit.slice(6)}`);
+  variants.add(`(${localTenDigit.slice(0, 3)}) ${localTenDigit.slice(3, 6)}-${localTenDigit.slice(6)}`);
+
+  return Array.from(variants);
+}
+
 // Get Twilio client (lazy initialization)
 export function getTwilioClient() {
   if (!twilioClientInstance) {

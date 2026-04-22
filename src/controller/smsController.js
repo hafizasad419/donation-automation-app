@@ -1,5 +1,5 @@
 import { getSession, setSession, deleteSession, getQStashJob, setQStashJob, deleteQStashJob } from "../lib/redis.js";
-import { sendSms } from "../lib/twilio.js";
+import { sendSms, buildPhoneFormatVariants } from "../lib/twilio.js";
 import { scheduleTimeout, cancelScheduledJob } from "../lib/qstash.js";
 import { logMessage } from "../lib/sheets.js";
 import { logStep, logRedis, logTwilio } from "../lib/logger.js";
@@ -24,10 +24,23 @@ import {
   COMMANDS, 
   MESSAGES, 
   TIMEOUT_MS, 
+  VERIFIED_NUMBERS,
   REDIS_SESSION_PREFIX, 
   REDIS_QSTASH_JOB_PREFIX 
 } from "../constants.js";
 import { APP_BASE_URL } from "../config/index.js";
+
+function isVerifiedSender(phone) {
+  const inboundVariants = new Set(buildPhoneFormatVariants(phone));
+  if (inboundVariants.size === 0) {
+    return false;
+  }
+
+  return VERIFIED_NUMBERS.some((verifiedNumber) => {
+    const verifiedVariants = buildPhoneFormatVariants(verifiedNumber);
+    return verifiedVariants.some((variant) => inboundVariants.has(variant));
+  });
+}
 
 export async function handleIncomingSms(req, res) {
   try {
@@ -49,6 +62,11 @@ export async function handleIncomingSms(req, res) {
     if (!from || !body) {
       console.log("❌ Missing From or Body in request");
       return res.status(400).send("Missing required fields");
+    }
+
+    if (!isVerifiedSender(from)) {
+      logStep(from, null, "Blocked unverified sender", { from });
+      return res.status(200).send("");
     }
     
     logStep(from, null, "Incoming SMS received", { body });

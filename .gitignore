@@ -4,3 +4,4 @@ node_modules
 .env-mendel
 .env-asad
 dist
+.DS_Store

@@ -14,6 +14,11 @@ export const TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
 export const REDIS_SESSION_PREFIX = "session:";
 export const REDIS_QSTASH_JOB_PREFIX = "qjob:";
 export const RECORD_ID_PREFIX = "D-";
+export const VERIFIED_NUMBERS = [
+  "9176205180",
+  "8452222444",
+  "2019687272"
+];
 
 // Response Messages
 export const MESSAGES = {
