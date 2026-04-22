@@ -17,7 +17,8 @@ export const RECORD_ID_PREFIX = "D-";
 export const VERIFIED_NUMBERS = [
   "9176205180",
   "8452222444",
-  "2019687272"
+  "2019687272",
+  "6465471241"
 ];
 
 // Response Messages
