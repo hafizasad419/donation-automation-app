@@ -3,6 +3,7 @@ import { setSession } from "../lib/redis.js";
 import { logMessage } from "../lib/sheets.js";
 import { logStep, logRedis, logTwilio } from "../lib/logger.js";
 import { MESSAGES, STEPS } from "../constants.js";
+import { clearMonthlySplitFields } from "./confirmationSummary.js";
 
 export async function handleEditRequest(phone, text, session) {
   try {
@@ -12,41 +13,66 @@ export async function handleEditRequest(phone, text, session) {
     const numberedEditMatch = text.match(/^(\d+)\.\s*(.+)$/);
     if (numberedEditMatch) {
       const fieldNumber = parseInt(numberedEditMatch[1]);
+
+      if (fieldNumber === 6) {
+        clearMonthlySplitFields(session.data);
+        session.editingField = "splitMonthly";
+        session.step = STEPS.SPLIT_MONTHLY_PROMPT;
+        session.lastMessageAt = Date.now();
+        await setSession(phone, session);
+        logRedis("setSession", phone, true);
+        await sendSms(phone, MESSAGES.SPLIT_MONTHLY_ASK);
+        logTwilio("sendSms", phone, true);
+        await logMessage(phone, MESSAGES.SPLIT_MONTHLY_ASK, "outbound", STEPS.SPLIT_MONTHLY_PROMPT);
+        logStep(phone, session.step, "Edit request: monthly split (numbered 6)", {});
+        return session;
+      }
+
       const newValue = numberedEditMatch[2].trim();
       
-      // Map field numbers to field names
       let fieldName = null;
       let message = "";
       
       switch (fieldNumber) {
-        case 1: // Congregation
+        case 1:
           fieldName = "congregation";
           message = "What's the congregation or organization name?";
           break;
-        case 2: // Person Name
+        case 2:
           fieldName = "personName";
           message = "What's the person's full name?";
           break;
-        case 3: // Tax ID
+        case 3:
+          fieldName = "personPhone";
+          message = "Please send the person's phone number (like 2124441100).";
+          break;
+        case 4:
           fieldName = "taxId";
           message = "Please send the Tax ID (9 digits, like 123456789 or 12-3456789).";
           break;
-        case 4: // Amount
+        case 5:
           fieldName = "amount";
           message = "What's the donation amount? (You can write 125, $125, or $125.00)";
           break;
+        case 7:
+          fieldName = "note";
+          message = MESSAGES.NOTE_PROMPT;
+          break;
         default:
-          await sendSms(phone, "Please enter a number between 1-4 followed by the new value (e.g., '2. Moshe Kohn')");
+          await sendSms(phone, "Please enter a number between 1-7 followed by the new value (e.g., '2. Moshe Kohn')");
           await logMessage(phone, "Invalid field number", "outbound", session.step);
           return session;
       }
       
       if (fieldName) {
-        // Set the editing field and appropriate step
         session.editingField = fieldName;
-        session.step = fieldNumber === 1 ? STEPS.CONGREGATION : 
-                      fieldNumber === 2 ? STEPS.PERSON_NAME :
-                      fieldNumber === 3 ? STEPS.TAX_ID : STEPS.AMOUNT;
+        session.step =
+          fieldNumber === 1 ? STEPS.CONGREGATION :
+          fieldNumber === 2 ? STEPS.PERSON_NAME :
+          fieldNumber === 3 ? STEPS.PHONE_NUMBER :
+          fieldNumber === 4 ? STEPS.TAX_ID :
+          fieldNumber === 5 ? STEPS.AMOUNT :
+          STEPS.NOTE;
         
         await setSession(phone, session);
         logRedis("setSession", phone, true);
@@ -116,6 +142,16 @@ export async function handleEditRequest(phone, text, session) {
       await sendSms(phone, message);
       logTwilio("sendSms", phone, true);
       await logMessage(phone, message, "outbound", STEPS.AMOUNT);
+      
+    } else if (lowerText.includes("split") || lowerText.includes("monthly")) {
+      clearMonthlySplitFields(session.data);
+      session.step = STEPS.SPLIT_MONTHLY_PROMPT;
+      session.editingField = "splitMonthly";
+      await setSession(phone, session);
+      logRedis("setSession", phone, true);
+      await sendSms(phone, MESSAGES.SPLIT_MONTHLY_ASK);
+      logTwilio("sendSms", phone, true);
+      await logMessage(phone, MESSAGES.SPLIT_MONTHLY_ASK, "outbound", STEPS.SPLIT_MONTHLY_PROMPT);
       
     } else {
       // Show current summary and ask what to change

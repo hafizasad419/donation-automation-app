@@ -4,6 +4,7 @@ import { setSession } from "../lib/redis.js";
 import { logMessage } from "../lib/sheets.js";
 import { MESSAGES, STEPS } from "../constants.js";
 import { logStep } from "../lib/logger.js";
+import { buildConfirmationSummaryMessage } from "./confirmationSummary.js";
 
 export async function handleCongregation(phone, text, session) {
   try {
@@ -31,14 +32,7 @@ export async function handleCongregation(phone, text, session) {
       session.editingField = null; // Clear edit flag
       await setSession(phone, session);
       
-      // Send updated confirmation summary
-      const summaryMessage = MESSAGES.CONFIRMATION_SUMMARY
-        .replace("{congregation}", session.data.congregation || "")
-        .replace("{person_name}", session.data.personName || "")
-        .replace("{personPhone}", session.data.personPhone || "")
-        .replace("{tax_id}", session.data.taxId || "")
-        .replace("{amount}", session.data.amount || "")
-        .replace("{note}", session.data.note || "");
+      const summaryMessage = buildConfirmationSummaryMessage(session);
       
       await sendSms(phone, summaryMessage);
       await logMessage(phone, summaryMessage, "outbound", STEPS.CONFIRMATION);

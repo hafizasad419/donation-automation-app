@@ -4,10 +4,16 @@ import { appendDonationRecord, generateRecordId } from "../lib/sheets.js";
 import { logMessage } from "../lib/sheets.js";
 import { logStep, logRedis, logTwilio } from "../lib/logger.js";
 import { MESSAGES, COMMANDS, STEPS } from "../constants.js";
+import {
+  buildConfirmationSummaryMessage,
+  buildNoteForSheet,
+  buildSplitSuccessRecap,
+  clearMonthlySplitFields,
+} from "./confirmationSummary.js";
 
 export async function handleConfirmation(phone, text, session) {
   try {
-    logStep(phone, 7, "Processing confirmation", { input: text });
+    logStep(phone, STEPS.CONFIRMATION, "Processing confirmation", { input: text });
     
     // Debug: Check what the YES pattern matches
     console.log(`🔍 [DEBUG] Confirmation input: "${text}"`);
@@ -18,6 +24,12 @@ export async function handleConfirmation(phone, text, session) {
     if (COMMANDS.YES.test(text)) {
       // Generate record ID and save to sheets
       const recordId = generateRecordId();
+      const noteForSheet = buildNoteForSheet(
+        session.data.note || "",
+        session.data.splitMonthlyEnabled
+          ? session.data.splitMonthlySummaryText || ""
+          : ""
+      );
       const record = [
         recordId,
         session.data.congregation || "",
@@ -25,7 +37,7 @@ export async function handleConfirmation(phone, text, session) {
         session.data.personPhone || "",
         session.data.taxId || "",
         session.data.amount || "",
-        session.data.note || ""  // Note field
+        noteForSheet
       ];
       
       try {
@@ -39,21 +51,23 @@ export async function handleConfirmation(phone, text, session) {
         throw appendError;
       }
       
-      // Send success message
-      const successMessage = MESSAGES.CONFIRMATION_SUCCESS.replace("{record_id}", recordId);
+      const splitRecap = buildSplitSuccessRecap(session);
+      const successMessage = MESSAGES.CONFIRMATION_SUCCESS
+        .replace("{record_id}", recordId)
+        .replace("{split_recap}", splitRecap);
       console.log(`🎉 [SUCCESS] Sending donation success message to ${phone}:`, successMessage);
       await sendSms(phone, successMessage);
       logTwilio("sendSms", phone, true);
       
       // Log message to sheets
-      await logMessage(phone, successMessage, "outbound", 7);
+      await logMessage(phone, successMessage, "outbound", STEPS.CONFIRMATION);
       console.log(`✅ [SUCCESS] Donation completion message sent and logged for ${phone}`);
       
       // Clear the session completely after successful donation
       await deleteSession(phone);
       logRedis("deleteSession", phone, true);
       
-      logStep(phone, 7, "Donation confirmed and saved", { recordId, record });
+      logStep(phone, STEPS.CONFIRMATION, "Donation confirmed and saved", { recordId, record });
       return session;
       
     } else {
@@ -93,17 +107,29 @@ export async function handleConfirmation(phone, text, session) {
             targetStep = STEPS.AMOUNT;
             promptMessage = "What's the donation amount? (You can write 125, $125, or $125.00)";
             break;
-          case 6: // Note
+          case 6: // Monthly split
+            clearMonthlySplitFields(session.data);
+            session.editingField = "splitMonthly";
+            session.step = STEPS.SPLIT_MONTHLY_PROMPT;
+            session.lastMessageAt = Date.now();
+            await setSession(phone, session);
+            logRedis("setSession", phone, true);
+            await sendSms(phone, MESSAGES.SPLIT_MONTHLY_ASK);
+            logTwilio("sendSms", phone, true);
+            await logMessage(phone, MESSAGES.SPLIT_MONTHLY_ASK, "outbound", STEPS.SPLIT_MONTHLY_PROMPT);
+            logStep(phone, STEPS.SPLIT_MONTHLY_PROMPT, "Number-only edit: monthly split", { fieldNumber });
+            return session;
+          case 7: // Note
             fieldName = "note";
             targetStep = STEPS.NOTE;
             promptMessage = MESSAGES.NOTE_PROMPT;
             break;
           default:
             // Invalid field number
-            await sendSms(phone, "Please enter a number between 1-6.");
+            await sendSms(phone, "Please enter a number between 1-7.");
             logTwilio("sendSms", phone, true);
-            await logMessage(phone, "Invalid field number for number-only edit", "outbound", 7);
-            logStep(phone, 7, "Invalid field number in number-only edit", { fieldNumber });
+            await logMessage(phone, "Invalid field number for number-only edit", "outbound", STEPS.CONFIRMATION);
+            logStep(phone, STEPS.CONFIRMATION, "Invalid field number in number-only edit", { fieldNumber });
             return session;
         }
         
@@ -177,7 +203,19 @@ export async function handleConfirmation(phone, text, session) {
             };
             stepHandler = "handleAmount";
             break;
-          case 6: // Note
+          case 6: // Monthly split — re-prompt (ignore inline value)
+            clearMonthlySplitFields(session.data);
+            session.editingField = "splitMonthly";
+            session.step = STEPS.SPLIT_MONTHLY_PROMPT;
+            session.lastMessageAt = Date.now();
+            await setSession(phone, session);
+            logRedis("setSession", phone, true);
+            await sendSms(phone, MESSAGES.SPLIT_MONTHLY_ASK);
+            logTwilio("sendSms", phone, true);
+            await logMessage(phone, MESSAGES.SPLIT_MONTHLY_ASK, "outbound", STEPS.SPLIT_MONTHLY_PROMPT);
+            logStep(phone, STEPS.SPLIT_MONTHLY_PROMPT, "Numbered edit: monthly split re-prompt", { fieldNumber });
+            return session;
+          case 7: // Note
             fieldName = "note";
             validationFunction = async (value) => {
               const { noteSchema } = await import("../validator/step06.zod.js");
@@ -187,9 +225,9 @@ export async function handleConfirmation(phone, text, session) {
             break;
           default:
             // Invalid field number
-            await sendSms(phone, "Please enter a number between 1-6 followed by the new value (e.g., '2. Moshe Kohn')");
+            await sendSms(phone, "Please enter a number between 1-7 followed by the new value (e.g., '2. Moshe Kohn')");
             logTwilio("sendSms", phone, true);
-            await logMessage(phone, "Invalid field number", "outbound", 7);
+            await logMessage(phone, "Invalid field number", "outbound", STEPS.CONFIRMATION);
             return session;
         }
         
@@ -202,28 +240,34 @@ export async function handleConfirmation(phone, text, session) {
             if (fieldName === "amount") {
               session.data.amount = validatedValue.formatted;
               session.data.amountNumeric = validatedValue.numeric;
-            } else {
-              session.data[fieldName] = validatedValue;
+              clearMonthlySplitFields(session.data);
+              session.editingField = null;
+              session.step = STEPS.SPLIT_MONTHLY_PROMPT;
+              session.lastMessageAt = Date.now();
+              await setSession(phone, session);
+              logRedis("setSession", phone, true);
+              await sendSms(phone, MESSAGES.SPLIT_MONTHLY_ASK);
+              logTwilio("sendSms", phone, true);
+              await logMessage(phone, MESSAGES.SPLIT_MONTHLY_ASK, "outbound", STEPS.SPLIT_MONTHLY_PROMPT);
+              logStep(phone, STEPS.SPLIT_MONTHLY_PROMPT, "Amount updated via numbered edit; re-asking split", {
+                fieldNumber,
+              });
+              return session;
             }
-            
+
+            session.data[fieldName] = validatedValue;
+
             session.lastMessageAt = Date.now();
             await setSession(phone, session);
             logRedis("setSession", phone, true);
             
-            // Send updated confirmation summary
-            const summaryMessage = MESSAGES.CONFIRMATION_SUMMARY
-              .replace("{congregation}", session.data.congregation || "")
-              .replace("{person_name}", session.data.personName || "")
-              .replace("{personPhone}", session.data.personPhone || "")
-              .replace("{tax_id}", session.data.taxId || "")
-              .replace("{amount}", session.data.amount || "")
-              .replace("{note}", session.data.note || "");
+            const summaryMessage = buildConfirmationSummaryMessage(session);
             
             await sendSms(phone, summaryMessage);
             logTwilio("sendSms", phone, true);
-            await logMessage(phone, summaryMessage, "outbound", 7);
+            await logMessage(phone, summaryMessage, "outbound", STEPS.CONFIRMATION);
             
-            logStep(phone, 7, `Field ${fieldNumber} updated successfully`, { fieldName, newValue: validatedValue });
+            logStep(phone, STEPS.CONFIRMATION, `Field ${fieldNumber} updated successfully`, { fieldName, newValue: validatedValue });
             return session;
             
           } catch (error) {
@@ -245,16 +289,16 @@ export async function handleConfirmation(phone, text, session) {
               case 5:
                 errorMessage = "Please write the number as digits, like 180 or $180.00.";
                 break;
-              case 6:
+              case 7:
                 errorMessage = "Please provide a note or say 'skip' to continue without a note.";
                 break;
             }
             
             await sendSms(phone, errorMessage);
             logTwilio("sendSms", phone, true);
-            await logMessage(phone, errorMessage, "outbound", 7);
+            await logMessage(phone, errorMessage, "outbound", STEPS.CONFIRMATION);
             
-            logStep(phone, 7, `Field ${fieldNumber} validation failed`, { error: error.message });
+            logStep(phone, STEPS.CONFIRMATION, `Field ${fieldNumber} validation failed`, { error: error.message });
             return session;
           }
         }
@@ -262,9 +306,9 @@ export async function handleConfirmation(phone, text, session) {
         // Invalid response format
         await sendSms(phone, "Please reply 'Yes' to confirm or use the format 'number. new value' to edit (e.g., '2. Moshe Kohn')");
         logTwilio("sendSms", phone, true);
-        await logMessage(phone, "Invalid response format", "outbound", 7);
+        await logMessage(phone, "Invalid response format", "outbound", STEPS.CONFIRMATION);
         
-        logStep(phone, 7, "Invalid confirmation response", { text });
+        logStep(phone, STEPS.CONFIRMATION, "Invalid confirmation response", { text });
         return session;
       }
     }
@@ -276,9 +320,9 @@ export async function handleConfirmation(phone, text, session) {
     await sendSms(phone, "Sorry, there was an error processing your donation. Please try again.");
     logTwilio("sendSms", phone, true);
     
-    await logMessage(phone, "Error processing confirmation", "outbound", 7);
+    await logMessage(phone, "Error processing confirmation", "outbound", STEPS.CONFIRMATION);
     
-    logStep(phone, 7, "Confirmation processing failed", { error: error.message });
+    logStep(phone, STEPS.CONFIRMATION, "Confirmation processing failed", { error: error.message });
     return session;
   }
 }

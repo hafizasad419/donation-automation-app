@@ -4,10 +4,11 @@ import { setSession } from "../lib/redis.js";
 import { logMessage } from "../lib/sheets.js";
 import { logStep, logRedis, logTwilio } from "../lib/logger.js";
 import { MESSAGES, STEPS, COMMANDS } from "../constants.js";
+import { buildConfirmationSummaryMessage } from "./confirmationSummary.js";
 
 export async function handleNote(phone, text, session) {
   try {
-    logStep(phone, 6, "Processing note", { input: text });
+    logStep(phone, STEPS.NOTE, "Processing note", { input: text });
     
     // Check if user wants to skip note
     if (COMMANDS.SKIP_NOTE.test(text)) {
@@ -17,9 +18,10 @@ export async function handleNote(phone, text, session) {
       await setSession(phone, session);
       logRedis("setSession", phone, true);
       
-      await sendSms(phone, MESSAGES.NOTE_SKIP);
+      const skipAndSummary = `${MESSAGES.NOTE_SKIP}\n\n${buildConfirmationSummaryMessage(session)}`;
+      await sendSms(phone, skipAndSummary);
       logTwilio("sendSms", phone, true);
-      await logMessage(phone, MESSAGES.NOTE_SKIP, "outbound", STEPS.CONFIRMATION);
+      await logMessage(phone, skipAndSummary, "outbound", STEPS.CONFIRMATION);
       
       logStep(phone, STEPS.CONFIRMATION, "Note skipped");
       return session;
@@ -39,14 +41,7 @@ export async function handleNote(phone, text, session) {
       await setSession(phone, session);
       logRedis("setSession", phone, true);
       
-      // Send updated confirmation summary
-      const summaryMessage = MESSAGES.CONFIRMATION_SUMMARY
-        .replace("{congregation}", session.data.congregation || "")
-        .replace("{person_name}", session.data.personName || "")
-        .replace("{personPhone}", session.data.personPhone || "")
-        .replace("{tax_id}", session.data.taxId || "")
-        .replace("{amount}", session.data.amount || "")
-        .replace("{note}", session.data.note || "");
+      const summaryMessage = buildConfirmationSummaryMessage(session);
       
       await sendSms(phone, summaryMessage);
       logTwilio("sendSms", phone, true);
@@ -60,21 +55,14 @@ export async function handleNote(phone, text, session) {
       await setSession(phone, session);
       logRedis("setSession", phone, true);
       
-      // Send confirmation summary
-      const summaryMessage = MESSAGES.CONFIRMATION_SUMMARY
-        .replace("{congregation}", session.data.congregation || "")
-        .replace("{person_name}", session.data.personName || "")
-        .replace("{personPhone}", session.data.personPhone || "")
-        .replace("{tax_id}", session.data.taxId || "")
-        .replace("{amount}", session.data.amount || "")
-        .replace("{note}", parsed || "");
+      const summaryMessage = buildConfirmationSummaryMessage(session);
       
       await sendSms(phone, summaryMessage);
       logTwilio("sendSms", phone, true);
       await logMessage(phone, summaryMessage, "outbound", STEPS.CONFIRMATION);
     }
     
-    logStep(phone, 6, "Note processed successfully", { note: parsed });
+    logStep(phone, STEPS.NOTE, "Note processed successfully", { note: parsed });
     return session;
     
   } catch (error) {
@@ -85,9 +73,9 @@ export async function handleNote(phone, text, session) {
     logTwilio("sendSms", phone, true);
     
     // Log message to sheets
-    await logMessage(phone, MESSAGES.NOTE_INVALID, "outbound", 6);
+    await logMessage(phone, MESSAGES.NOTE_INVALID, "outbound", STEPS.NOTE);
     
-    logStep(phone, 6, "Note validation failed", { error: error.message });
+    logStep(phone, STEPS.NOTE, "Note validation failed", { error: error.message });
     return session;
   }
 }

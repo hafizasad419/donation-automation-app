@@ -13,6 +13,7 @@ import { handleTaxId } from "../service/step04_taxId.js";
 import { handleAmount } from "../service/step05_amount.js";
 import { handleNote } from "../service/step06_note.js";
 import { handleConfirmation } from "../service/step07_confirmation.js";
+import { handleSplitMonthlyPrompt, handleSplitMonthlyCount } from "../service/step05_split_monthly.js";
 
 // Import utility services
 import { handleEditRequest } from "../service/editService.js";
@@ -282,6 +283,12 @@ export async function handleIncomingSms(req, res) {
           break;
         case STEPS.AMOUNT:
           result = await handleAmount(from, body, session);
+          break;
+        case STEPS.SPLIT_MONTHLY_PROMPT:
+          result = await handleSplitMonthlyPrompt(from, body, session);
+          break;
+        case STEPS.SPLIT_MONTHLY_COUNT:
+          result = await handleSplitMonthlyCount(from, body, session);
           break;
         case STEPS.NOTE:
           result = await handleNote(from, body, session);

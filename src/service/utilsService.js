@@ -3,6 +3,7 @@ import { setSession } from "../lib/redis.js";
 import { logMessage } from "../lib/sheets.js";
 import { logStep, logTwilio, logRedis } from "../lib/logger.js";
 import { MESSAGES, STEPS } from "../constants.js";
+import { buildConfirmationSummaryMessage } from "./confirmationSummary.js";
 
 export async function handleNewEntryMidway(phone, session) {
   try {
@@ -34,13 +35,7 @@ export async function handleFinishRequest(phone, session) {
     
     // Continue with current step
     if (session.step === STEPS.CONFIRMATION) {
-      // Show confirmation summary
-      const summaryMessage = MESSAGES.CONFIRMATION_SUMMARY
-        .replace("{congregation}", session.data.congregation || "")
-        .replace("{person_name}", session.data.personName || "")
-        .replace("{personPhone}", session.data.personPhone || "")
-        .replace("{tax_id}", session.data.taxId || "")
-        .replace("{amount}", session.data.amount || "");
+      const summaryMessage = buildConfirmationSummaryMessage(session);
       
       await sendSms(phone, summaryMessage);
       logTwilio("sendSms", phone, true);
@@ -64,6 +59,15 @@ export async function handleFinishRequest(phone, session) {
           break;
         case STEPS.AMOUNT:
           message = "What's the donation amount? (You can write 125, $125, or $125.00)";
+          break;
+        case STEPS.SPLIT_MONTHLY_PROMPT:
+          message = MESSAGES.SPLIT_MONTHLY_ASK;
+          break;
+        case STEPS.SPLIT_MONTHLY_COUNT:
+          message = MESSAGES.SPLIT_MONTHLY_COUNT_ASK;
+          break;
+        case STEPS.NOTE:
+          message = MESSAGES.NOTE_PROMPT;
           break;
         default:
           message = MESSAGES.START;

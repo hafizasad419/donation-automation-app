@@ -4,6 +4,7 @@ import { setSession } from "../lib/redis.js";
 import { logMessage } from "../lib/sheets.js";
 import { logStep, logRedis, logTwilio } from "../lib/logger.js";
 import { MESSAGES, STEPS } from "../constants.js";
+import { buildConfirmationSummaryMessage } from "./confirmationSummary.js";
 
 export async function handleTaxId(phone, text, session) {
   try {
@@ -23,14 +24,7 @@ export async function handleTaxId(phone, text, session) {
       await setSession(phone, session);
       logRedis("setSession", phone, true);
       
-      // Send updated confirmation summary
-      const summaryMessage = MESSAGES.CONFIRMATION_SUMMARY
-        .replace("{congregation}", session.data.congregation || "")
-        .replace("{person_name}", session.data.personName || "")
-        .replace("{personPhone}", session.data.personPhone || "")
-        .replace("{tax_id}", session.data.taxId || "")
-        .replace("{amount}", session.data.amount || "")
-        .replace("{note}", session.data.note || "");
+      const summaryMessage = buildConfirmationSummaryMessage(session);
       
       await sendSms(phone, summaryMessage);
       logTwilio("sendSms", phone, true);

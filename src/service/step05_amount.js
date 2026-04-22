@@ -4,6 +4,7 @@ import { setSession } from "../lib/redis.js";
 import { logMessage } from "../lib/sheets.js";
 import { logStep, logRedis, logTwilio } from "../lib/logger.js";
 import { MESSAGES, STEPS } from "../constants.js";
+import { clearMonthlySplitFields } from "./confirmationSummary.js";
 
 export async function handleAmount(phone, text, session) {
   try {
@@ -19,38 +20,27 @@ export async function handleAmount(phone, text, session) {
     
     // Check if we're editing a field - if so, return to confirmation
     if (session.editingField === "amount") {
-      session.step = STEPS.CONFIRMATION;
-      session.editingField = null; // Clear edit flag
+      clearMonthlySplitFields(session.data);
+      session.editingField = null;
+      session.step = STEPS.SPLIT_MONTHLY_PROMPT;
       await setSession(phone, session);
       logRedis("setSession", phone, true);
-      
-      // Send updated confirmation summary
-      const summaryMessage = MESSAGES.CONFIRMATION_SUMMARY
-        .replace("{congregation}", session.data.congregation || "")
-        .replace("{person_name}", session.data.personName || "")
-        .replace("{personPhone}", session.data.personPhone || "")
-        .replace("{tax_id}", session.data.taxId || "")
-        .replace("{amount}", parsed.formatted)
-        .replace("{note}", session.data.note || "");
-      
-      await sendSms(phone, summaryMessage);
+
+      await sendSms(phone, MESSAGES.SPLIT_MONTHLY_ASK);
       logTwilio("sendSms", phone, true);
-      await logMessage(phone, summaryMessage, "outbound", STEPS.CONFIRMATION);
-      
-      logStep(phone, STEPS.CONFIRMATION, "Returned to confirmation after editing amount");
+      await logMessage(phone, MESSAGES.SPLIT_MONTHLY_ASK, "outbound", STEPS.SPLIT_MONTHLY_PROMPT);
+
+      logStep(phone, STEPS.SPLIT_MONTHLY_PROMPT, "Amount updated; re-asking monthly split");
       return session;
     } else {
-      // Normal flow - continue to note step
-      session.step = STEPS.NOTE;
+      clearMonthlySplitFields(session.data);
+      session.step = STEPS.SPLIT_MONTHLY_PROMPT;
       await setSession(phone, session);
       logRedis("setSession", phone, true);
-      
-      // Send note prompt
-      await sendSms(phone, MESSAGES.NOTE_PROMPT);
+
+      await sendSms(phone, MESSAGES.SPLIT_MONTHLY_ASK);
       logTwilio("sendSms", phone, true);
-      
-      // Log message to sheets
-      await logMessage(phone, MESSAGES.NOTE_PROMPT, "outbound", STEPS.NOTE);
+      await logMessage(phone, MESSAGES.SPLIT_MONTHLY_ASK, "outbound", STEPS.SPLIT_MONTHLY_PROMPT);
     }
     
     logStep(phone, 5, "Amount processed successfully", { amount: parsed.formatted });

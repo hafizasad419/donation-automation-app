@@ -6,8 +6,10 @@ export const STEPS = {
   PHONE_NUMBER: 3,
   TAX_ID: 4,
   AMOUNT: 5,
-  NOTE: 6,
-  CONFIRMATION: 7
+  SPLIT_MONTHLY_PROMPT: 6,
+  SPLIT_MONTHLY_COUNT: 7,
+  NOTE: 8,
+  CONFIRMATION: 9
 };
 
 export const TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
@@ -15,10 +17,12 @@ export const REDIS_SESSION_PREFIX = "session:";
 export const REDIS_QSTASH_JOB_PREFIX = "qjob:";
 export const RECORD_ID_PREFIX = "D-";
 export const VERIFIED_NUMBERS = [
+  // mendel given three numbers
   "9176205180",
   "8452222444",
-  "2019687272",
-  "6465471241"
+  "2019687272", 
+  //Asad's callcentric number
+  "6465471241" 
 ];
 
 // Response Messages
@@ -40,14 +44,19 @@ export const MESSAGES = {
   AMOUNT_SUCCESS: "Perfect — I've got the Tax ID as {tax_id}.\nWhat's the donation amount?\n(You can write 125, $125, or $125.00)\nIf you'd like to change something earlier, you can still say \"Change the congregation\" or \"Go back.\"",
   AMOUNT_INVALID: "Please write the number as digits, like 180 or $180.00.\nWhat's the donation amount?",
 
+  SPLIT_MONTHLY_ASK: "Do you want to split this donation into equal monthly parts? Reply YES or NO.",
+  SPLIT_MONTHLY_INVALID: "Please reply YES if you want equal monthly payments, or NO to continue as one donation.",
+  SPLIT_MONTHLY_COUNT_ASK: "How many monthly parts? (e.g. 4 for four equal payments). Send a whole number from 2 to 24.",
+  SPLIT_MONTHLY_COUNT_INVALID: "Please send a whole number between 2 and 24.",
+
   NOTE_PROMPT: "If you would like to add a note or memo for this donation, Reply with a note (You can say 'skip' or 'no' to continue without a note)",
   NOTE_SUCCESS: "Thanks! I've noted: {note}\nNow let's confirm everything...",
   NOTE_SKIP: "No problem, continuing without a note...",
   NOTE_INVALID: "Please provide a note or say 'skip' to continue without a note.",
 
-  CONFIRMATION_SUMMARY: "Here's what I have so far:\n1. Congregation: {congregation}\n2. Person: {person_name}\n3. Phone: {personPhone}\n4. Tax ID: {tax_id}\n5. Amount: {amount}\n6. Note: {note}\n\nDoes everything look right?\nPlease reply \"Yes\" to confirm - or reply with the number of the item you'd like to edit, followed by the new details.\n\nExample:\n2. Moshe Kohn",
+  CONFIRMATION_SUMMARY: "Here's what I have so far:\n1. Congregation: {congregation}\n2. Person: {person_name}\n3. Phone: {personPhone}\n4. Tax ID: {tax_id}\n5. Amount: {amount}\n6. Monthly split: {split_line}\n7. Note: {note}\n\nDoes everything look right?\nPlease reply \"Yes\" to confirm - or reply with the number of the item you'd like to edit, followed by the new details.\n\nExample:\n2. Moshe Kohn",
 
-  CONFIRMATION_SUCCESS: "Great! Your donation record has been saved.\nRecord ID: {record_id}. Have a great day!",
+  CONFIRMATION_SUCCESS: "Great! Your donation record has been saved.\nRecord ID: {record_id}{split_recap}\nHave a great day!",
   CONFIRMATION_CHANGE: "Please reply \"Yes\" to confirm or tell me what to change.",
   CONVERSATION_END: "Okay, thank you for your donation! Have a great day!",
 
