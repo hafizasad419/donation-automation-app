@@ -20,9 +20,13 @@ export const VERIFIED_NUMBERS = [
   // mendel given three numbers
   "9176205180",
   "8452222444",
-  "2019687272", 
+  "2019687272",
+  
+  // Mendel given new number
+  "8457092020",
+
   //Asad's callcentric number
-  "6465471241" 
+  "6465471241"
 ];
 
 // Response Messages
